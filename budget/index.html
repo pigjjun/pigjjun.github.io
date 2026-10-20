@@ -361,6 +361,23 @@ nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2
 .fab{display:inline-flex;align-items:center;gap:6px}
 .fab svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;flex:none}
 @media (max-width:640px){.fab{width:56px;height:56px;padding:0;justify-content:center}.fab span{display:none}.fab svg{width:26px;height:26px}}
+.jumpbar{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--stick-top,0px));z-index:4;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;
+  background:color-mix(in srgb,var(--surface) 90%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  border:1px solid var(--line);border-radius:999px;padding:4px;margin-bottom:12px;box-shadow:var(--shadow)}
+.jumpbar::-webkit-scrollbar{display:none}
+.jchip{flex:none;display:inline-flex;align-items:center;gap:6px;border:0;background:none;border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;transition:background-color .2s,color .2s}
+.jchip[aria-current="true"]{background:var(--ink);color:var(--bg)}
+.gdot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--muted)}
+.gdot.g-move{background:var(--move)} .gdot.g-baby{background:var(--baby)}
+#v-summary [id^="j-"],#items-list .sec{scroll-margin-top:80px}
+.bills{margin-top:0}
+.exitbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:30;
+  width:min(420px,calc(100vw - 24px));display:flex;align-items:center;gap:12px;justify-content:space-between;
+  background:var(--ink);color:var(--bg);border-radius:16px;padding:14px 14px 14px 18px;box-shadow:0 12px 32px rgba(0,0,0,.25)}
+.exitbar div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.exitbar span{font-size:12px;opacity:.75}
+.exitbar .btn{flex:none;background:var(--bg);color:var(--ink);border-color:var(--bg)}
+@media (prefers-reduced-motion:no-preference){.exitbar.in{animation:toastIn .22s var(--ease)}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes popIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
@@ -448,6 +465,10 @@ nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2
 <datalist id="dl-when"></datalist>
 <div class="toast" id="toast" hidden></div>
 <div class="pop" id="pop" role="menu" hidden></div>
+<div class="exitbar" id="exitbar" role="alertdialog" aria-labelledby="exit-t" hidden>
+  <div><b id="exit-t">예산장을 종료할까요?</b><span>뒤로가기를 한 번 더 누르면 종료돼요.</span></div>
+  <button type="button" class="btn primary" id="exit-stay">계속 쓰기</button>
+</div>
 <div class="lock" id="lock" hidden>
   <form class="lock-box" id="lock-form">
     <svg class="logo big" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--accent)"/><path d="M16 7 6 15h3v9.5h14V15h3z" fill="var(--accent-ink)"/><path d="M16 21.5s-3.6-2.2-3.6-4.4a1.9 1.9 0 0 1 3.6-.9 1.9 1.9 0 0 1 3.6.9c0 2.2-3.6 4.4-3.6 4.4z" fill="var(--accent)"/></svg>
@@ -637,6 +658,53 @@ async function writeMany(col, updates){
 }
 const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
+/* ---------- 상단 이동 바 (현황·지출) ---------- */
+const jumpChips = list => list.map(([id, label]) => `<button type="button" class="jchip" data-jump="${id}">${label}</button>`).join('');
+// 이동 바가 화면 위에 붙어 있을 때 그 아래쪽 위치 (그만큼 비켜서 스크롤)
+function jumpOffset(){
+  const bar = document.querySelector(`#v-${UI.tab} .jumpbar`);
+  if (!bar) return 12;
+  return (parseFloat(getComputedStyle(bar).top) || 0) + bar.offsetHeight + 10;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-jump]');
+  if (!b) return;
+  const t = document.getElementById(b.dataset.jump);
+  if (!t) return;
+  const top = b.dataset.jump === 'j-top' ? 0 : t.getBoundingClientRect().top + scrollY - jumpOffset();
+  window.scrollTo({top: Math.max(0, top), behavior: reduceMotionNow() ? 'auto' : 'smooth'});
+});
+const reduceMotionNow = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+// 스크롤하면 지금 보고 있는 부분의 칩을 표시 (프레임당 한 번만 계산)
+let jumpTick = false;
+function updateJumpActive(){
+  jumpTick = false;
+  const bar = document.querySelector(`#v-${UI.tab} .jumpbar`);
+  if (!bar) return;
+  const chips = [...bar.querySelectorAll('[data-jump]')];
+  const off = jumpOffset() + 4;
+  let cur = chips[0];
+  for (const c of chips){
+    const t = document.getElementById(c.dataset.jump);
+    if (t && t.getBoundingClientRect().top <= off) cur = c;
+  }
+  // 맨 아래까지 내렸으면 마지막 칩
+  if (window.innerHeight + scrollY >= document.documentElement.scrollHeight - 4) cur = chips[chips.length - 1];
+  for (const c of chips) c.setAttribute('aria-current', c === cur ? 'true' : 'false');
+  if (cur && bar.dataset.cur !== cur.dataset.jump){
+    bar.dataset.cur = cur.dataset.jump;
+    bar.scrollTo({left: Math.max(0, cur.offsetLeft - 24), behavior: reduceMotionNow() ? 'auto' : 'smooth'});
+  }
+}
+window.addEventListener('scroll', () => { if (!jumpTick){ jumpTick = true; requestAnimationFrame(updateJumpActive); } }, {passive: true});
+// PC에서는 위쪽 탭바 아래에 붙도록 높이를 알려 준다
+function setStickTop(){
+  const n = document.querySelector('nav.tabs');
+  const sticky = getComputedStyle(n).position === 'sticky';
+  document.documentElement.style.setProperty('--stick-top', sticky ? n.offsetHeight + 8 + 'px' : '0px');
+}
+window.addEventListener('resize', setStickTop);
+
 /* ---------- 탭 ---------- */
 function showTab(t){
   if (!['summary','items','funds','todo'].includes(t)) t = 'summary';
@@ -648,7 +716,8 @@ function showTab(t){
     sec.hidden = !show;
   }
   $('#fab').hidden = !(t === 'items' || t === 'summary');
-  try { history.replaceState(null, '', '#' + t); } catch {}
+  try { history.replaceState(history.state, '', '#' + t); } catch {}
+  requestAnimationFrame(updateJumpActive);
 }
 document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => { showTab(b.dataset.tab); window.scrollTo(0, 0); }));
 
@@ -675,7 +744,7 @@ function renderSummary(){
     });
     const srcChips = Object.entries(bySrc).sort((a, b) => (a[0] === '') - (b[0] === '') || b[1] - a[1])
       .map(([k, v]) => `<span class="${k ? '' : 'unset'}">${esc(k ? fundName(k) || '삭제된 자금' : '출처 미정')} ${won(v)}</span>`).join('');
-    return `<div class="panel">
+    return `<div class="panel" id="j-bill-${months.indexOf(m)}">
       <h2>${esc(m)} 카드 출금 예정 <small>${rows.length}건</small></h2>
       <div class="bill-total num">${won(sum(rows))}</div>
       <div class="hint">카드로 이미 결제한 금액이에요. 어디서 메꿀지 골라 두세요.</div>
@@ -710,8 +779,11 @@ function renderSummary(){
   const c = {plan: cnt('plan'), card: cnt('card'), settled: cnt('settled'), gift: cnt('gift')};
   const todos = S.todos.filter(t => !t.done).sort(byOrder);
 
+  const jumps = [['j-top', '요약'], ['j-funds', '자금 계획'], ['j-progress', '진행 상황'], ['j-todo', '할 일'],
+    ...months.map((m, k) => ['j-bill-' + k, m + ' 카드'])];
   el.innerHTML = `
-    <div>
+    <nav class="jumpbar" aria-label="현황 바로가기">${jumpChips(jumps)}</nav>
+    <div id="j-top">
       <div class="kpis">
         <div class="kpi"><span class="eyebrow">총 지출 예정</span><b class="num" title="${won(total)}">${kr(total)}</b><span class="sub num">${won(total)}</span></div>
         <div class="kpi"><span class="eyebrow">마련된 자금<small>대출 제외</small></span><b class="num" title="${won(fundTotal)}">${kr(fundTotal)}</b><span class="sub num">${won(fundTotal)}</span></div>
@@ -719,15 +791,15 @@ function renderSummary(){
       </div>
     </div>
     <div class="grid2">
-      <div class="stack">${billBlocks}
-      </div>
       <div class="stack">
-        <div class="panel">
+        <div class="panel" id="j-funds">
           <h2>자금별 사용 계획 <small>지출에 출처를 정하면 여기서 빠져요</small></h2>
           <ul class="funds">${fundRows}</ul>
           ${unassigned.length ? `<button type="button" class="linkrow" data-goto="nosrc">출처 아직 안 정한 지출 <b class="num">${unassigned.length}건 · ${won(unassignedSum)}</b><i aria-hidden="true">›</i></button>` : '<div class="hint" style="margin-top:12px">모든 지출의 출처를 정했어요.</div>'}
         </div>
-        <div class="panel">
+      </div>
+      <div class="stack">
+        <div class="panel" id="j-progress">
           <h2>진행 상황</h2>
           <div class="counts">
             <button type="button" data-goto="plan"><span class="pill s-plan">구매 예정</span><b class="num">${c.plan.n}건</b><span class="hint num">${won(c.plan.amt)}</span><i aria-hidden="true">›</i></button>
@@ -736,12 +808,13 @@ function renderSummary(){
             <button type="button" data-goto="gift"><span class="pill s-gift">선물 받음</span><b class="num">${c.gift.n}건</b><span class="hint num">가액 ${won(c.gift.gift)}</span><i aria-hidden="true">›</i></button>
           </div>
         </div>
-        <div class="panel">
+        <div class="panel" id="j-todo">
           <h2>남은 할 일 <small>${todos.length}개</small></h2>
           ${todos.length ? `<ul class="todos">${todos.slice(0, 5).map(t => `<li><span class="tx">${esc(t.text)}</span></li>`).join('')}</ul>` : '<div class="empty">다 했어요.</div>'}
         </div>
       </div>
-    </div>`;
+    </div>
+    ${billBlocks ? `<div class="grid2 bills">${billBlocks}</div>` : ''}`;
 
   el.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => {
     UI.status = b.dataset.goto; UI.group = 'all'; UI.q = ''; $('#f-q').value = '';
@@ -814,8 +887,9 @@ function renderItems(){
     s.rows.push(i);
   }
   secs.sort((a, b) => (a.group === 'move' ? 0 : 1) - (b.group === 'move' ? 0 : 1));
-  el.innerHTML = `<div class="hint" style="padding:0 4px">${rows.length}건 · 합계 <b class="num">${won(sum(rows))}</b></div>` +
-    secs.map(s => `<div class="sec">
+  el.innerHTML = `<nav class="jumpbar" aria-label="분류 바로가기">${jumpChips(secs.map((s, k) => ['j-sec-' + k, `<i class="gdot g-${s.group}"></i>${esc(s.name)}`]))}</nav>
+    <div class="hint" style="padding:0 4px">${rows.length}건 · 합계 <b class="num">${won(sum(rows))}</b></div>` +
+    secs.map((s, k) => `<div class="sec" id="j-sec-${k}">
       <div class="sec-h"><span><span class="g-${s.group}">${GROUP[s.group] || ''}</span> · ${esc(s.name)}</span><span class="num">${won(sum(s.rows))}</span></div>
       <div class="list">${s.rows.map(itemRow).join('')}</div></div>`).join('');
 }
@@ -1188,7 +1262,7 @@ $('#todo-form').addEventListener('submit', async e => {
   if (!await write('todos', newId('t'), {text, done: false, order: Date.now()})) inp.value = text;
 });
 
-function renderAll(){ renderSummary(); renderFilters(); renderItems(); renderFunds(); renderTodo(); }
+function renderAll(){ renderSummary(); renderFilters(); renderItems(); renderFunds(); renderTodo(); requestAnimationFrame(updateJumpActive); }
 
 /* ---------- 금액 입력칸 ---------- */
 // 숫자 키패드, 입력하는 동안 쉼표, 아래에 "1억 2,000만원" 식으로 읽어 준다
@@ -1231,6 +1305,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 /* ---------- 시작 ---------- */
 let hashTab = 'summary';
 try { hashTab = (location.hash || '').slice(1) || 'summary'; } catch {}
+setStickTop();
 showTab(hashTab);
 renderAll();
 if (window.APP_VERSION) $('#ver').textContent = '버전 ' + window.APP_VERSION;
@@ -1249,7 +1324,31 @@ async function refresh(){
 }
 $('#sync').addEventListener('click', () => { setSync('', '동기화 중…'); refresh(); });
 
+/* ---------- 뒤로가기 (설치한 앱) ----------
+   열린 메뉴·편집 창 닫기 → 다른 탭이면 현황으로 → 현황이면 종료 안내.
+   안내가 떠 있는 동안 한 번 더 뒤로가기를 누르면 실제로 앱이 닫힌다. */
+function setupBack(){
+  const arm = () => { try { history.pushState({guard: 1}, '', location.hash); } catch {} };
+  const bar = $('#exitbar');
+  let hideTimer = 0;
+  const hideExit = rearm => { bar.hidden = true; clearTimeout(hideTimer); if (rearm) arm(); };
+  try { history.replaceState({root: 1}, '', location.hash); } catch {}
+  arm();
+  window.addEventListener('popstate', () => {
+    if (!pop.hidden){ closePop(); return arm(); }
+    if (dlg.open){ dlg.close(); return arm(); }
+    if (!bar.hidden) return; // (안내 중) 브라우저가 처리
+    if (UI.tab !== 'summary'){ showTab('summary'); window.scrollTo(0, 0); return arm(); }
+    if (scrollY > 200){ window.scrollTo({top: 0, behavior: 'smooth'}); return arm(); }
+    bar.hidden = false;
+    bar.classList.remove('in'); void bar.offsetWidth; bar.classList.add('in');
+    hideTimer = setTimeout(() => hideExit(true), 4000);
+  });
+  $('#exit-stay').addEventListener('click', () => hideExit(true));
+}
+
 if (API){
+  setupBack();
   const cached = store.get(CACHE_KEY);
   if (cached && pin){ try { applyAll(JSON.parse(cached), false); setSync('', '동기화 중…'); } catch {} }
   $('#lock-form').addEventListener('submit', async e => {
