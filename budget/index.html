@@ -360,6 +360,18 @@ nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2
 .fab{display:inline-flex;align-items:center;gap:6px}
 .fab svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;flex:none}
 @media (max-width:640px){.fab{width:56px;height:56px;padding:0;justify-content:center}.fab span{display:none}.fab svg{width:26px;height:26px}}
+.cats h2 small{font-weight:500}
+.catlist{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+.catlist button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;width:100%;text-align:left;border:0;background:none;border-radius:10px;padding:8px 8px 9px;margin:0 -8px;width:calc(100% + 16px)}
+.catlist button:hover,.catlist button:active{background:var(--sunk)}
+.catlist .cn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:14px}
+.catlist .cn em{font-style:normal;font-size:11px;font-weight:700;margin-right:6px;padding:1px 6px;border-radius:999px;background:var(--sunk)}
+.catlist .cn em.g-move{color:var(--move)} .catlist .cn em.g-baby{color:var(--baby)}
+.catlist .cn small,.catlist .ca small{font-weight:400;color:var(--muted);font-size:12px}
+.catlist .ca{font-weight:600;font-size:14px;text-align:right;white-space:nowrap}
+.catlist .cb{grid-column:1/-1;height:8px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.catlist .cb span{display:block;height:100%;border-radius:99px;transition:width .6s var(--ease)}
+.sec-chip{border-color:var(--accent)!important;background:var(--accent)!important;color:var(--accent-ink)!important}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes popIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
@@ -414,7 +426,7 @@ nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2
     <label class="field"><span>품목</span><input type="text" id="e-name" required></label>
     <div class="two">
       <label class="field"><span>구분</span><select id="e-group"><option value="move">이사</option><option value="baby">육아</option></select></label>
-      <label class="field"><span>분류</span><input type="text" id="e-section" list="dl-section"></label>
+      <label class="field"><span>분류</span><input type="text" id="e-section" list="dl-section" placeholder="새로 적으면 새 분류" autocomplete="off"></label>
     </div>
     <div class="two">
       <label class="field"><span>금액 (원)</span><input type="text" id="e-amount" class="money" data-read="e-amount-read" inputmode="numeric" pattern="[0-9,]*" autocomplete="off"><small class="read" id="e-amount-read"></small></label>
@@ -433,7 +445,7 @@ nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2
         <div id="e-sources" class="srcrows"></div>
         <div class="srcfoot"><button type="button" class="btn small" id="e-src-add">+ 출처 추가</button><span id="e-src-left" class="hint"></span></div>
       </div>
-      <label class="field" id="e-bill-wrap"><span>카드 출금월</span><input type="text" id="e-bill" placeholder="11월"></label>
+      <label class="field" id="e-bill-wrap"><span>카드 출금월</span><select id="e-bill"></select></label>
       <label class="field" id="e-gift-wrap"><span>선물 가액 (예산 제외)</span><input type="text" id="e-gift" class="money" data-read="e-gift-read" inputmode="numeric" pattern="[0-9,]*" autocomplete="off"><small class="read" id="e-gift-read"></small></label>
     </div>
     <label class="field"><span>메모 · 모델명 · 링크</span><textarea id="e-note" rows="2"></textarea></label>
@@ -471,7 +483,7 @@ const COLS = ['items','funds','monthly','todos'];
 const S = {items:[], funds:[], monthly:[], todos:[]};
 const loaded = new Set();
 let db = null, canWrite = true;
-const UI = {tab:'summary', group:'all', status:'all', q:'', editing:null};
+const UI = {tab:'summary', group:'all', section:'', status:'all', q:'', editing:null};
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -495,6 +507,14 @@ function krShort(n){
   if (man) p.push(man % 1000 === 0 ? man / 1000 + '천만' : man.toLocaleString('ko-KR') + '만');
   return p.join(' ') + '원';
 }
+// 카드 출금월 고르기: 이번 달 ~ 3달 뒤. 기본은 다음 달 (이번 달 카드값은 보통 다음 달에 빠짐)
+function billMonths(){
+  const m = new Date().getMonth();
+  return [0, 1, 2, 3].map(k => ((m + k) % 12 + 1) + '월');
+}
+const defaultBill = () => billMonths()[1];
+// 출금월 순서: 이번 달 기준으로 가까운 달부터 (12월 다음 1월)
+const billRank = s => { const k = billMonths().indexOf(s); return k < 0 ? 99 : k; };
 const sum = (arr, f = x => x.amount) => arr.reduce((a, x) => a + (Number(f(x)) || 0), 0);
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.name || a.text).localeCompare(String(b.name || b.text), 'ko');
 const fundName = id => S.funds.find(f => f.id === id)?.name;
@@ -656,7 +676,7 @@ function renderSummary(){
 
   // 카드 출금 대기 (월별)
   const card = items.filter(i => i.status === 'card').sort(byOrder);
-  const months = [...new Set(card.map(i => i.billMonth || '출금월 미정'))];
+  const months = [...new Set(card.map(i => i.billMonth || '출금월 미정'))].sort((a, b) => billRank(a) - billRank(b));
   const billBlocks = months.map(m => {
     const rows = card.filter(i => (i.billMonth || '출금월 미정') === m);
     const bySrc = {};
@@ -708,12 +728,8 @@ function renderSummary(){
         <div class="kpi"><span class="eyebrow">마련된 자금<small>대출 제외</small></span><b class="num" title="${won(fundTotal)}">${kr(fundTotal)}</b><span class="sub num">${won(fundTotal)}</span></div>
         <div class="kpi loan"><span class="eyebrow">${need >= 0 ? '대출 필요' : '여유 자금'}</span><b class="num">${kr(Math.abs(need))}</b><span class="sub num">${!loanTotal ? won(Math.abs(need)) : gap > 0 ? `대출 ${krShort(loanTotal)} 예정 · ${krShort(gap)} 더 필요` : `대출 ${krShort(loanTotal)} 예정`}</span></div>
       </div>
-      <div class="splitbar" aria-hidden="true">
-        <span style="width:${total ? sum(move) / total * 100 : 0}%;background:var(--move)"></span>
-        <span style="width:${total ? sum(baby) / total * 100 : 0}%;background:var(--baby)"></span>
-      </div>
-      <div class="legend"><span><i style="background:var(--move)"></i>이사 ${won(sum(move))}</span><span><i style="background:var(--baby)"></i>육아 ${won(sum(baby))}</span></div>
     </div>
+    ${catPanel(items, total)}
     <div class="grid2">
       <div class="stack">${billBlocks}
       </div>
@@ -739,8 +755,13 @@ function renderSummary(){
       </div>
     </div>`;
 
+  el.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => {
+    const [g, ...rest] = b.dataset.cat.split('|');
+    UI.group = g; UI.section = rest.join('|'); UI.status = 'all'; UI.q = ''; $('#f-q').value = '';
+    renderFilters(); renderItems(); showTab('items'); window.scrollTo(0, 0);
+  }));
   el.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => {
-    UI.status = b.dataset.goto; UI.group = 'all'; UI.q = ''; $('#f-q').value = '';
+    UI.status = b.dataset.goto; UI.group = 'all'; UI.section = ''; UI.q = ''; $('#f-q').value = '';
     renderFilters(); renderItems(); showTab('items'); window.scrollTo(0, 0);
   }));
   el.querySelectorAll('select[data-src]').forEach(s => s.addEventListener('change', async () => {
@@ -771,6 +792,32 @@ async function pickFund(v){
   return 'loan';
 }
 // 출처 한 곳(또는 미정)이면 고르는 칸, 여러 곳이면 눌러서 편집
+// 분류(소분류)별 지출: 분류마다 한 줄, 막대 길이는 가장 큰 분류 기준 (작은 분류도 보이게)
+const CAT_COLORS = {move: ['#2f6db3', '#4f8ad0', '#7aa7de', '#a3c2ea', '#c5d8f2'], baby: ['#d0628b', '#dd82a4', '#e9a3be', '#f1c2d4', '#f7dae5']};
+function catPanel(items, total){
+  const map = new Map();
+  for (const i of items){
+    const key = i.group + '|' + (i.section || '기타');
+    const c = map.get(key) || {group: i.group, name: i.section || '기타', amt: 0, n: 0};
+    c.amt += i.amount || 0; c.n++;
+    map.set(key, c);
+  }
+  const cats = [...map.values()].sort((a, b) => b.amt - a.amt);
+  const max = Math.max(1, ...cats.map(c => c.amt));
+  const idx = {move: 0, baby: 0};
+  return `<div class="panel cats">
+    <h2>분류별 지출 <small>이사 ${krShort(sum(items.filter(i => i.group === 'move')))} · 육아 ${krShort(sum(items.filter(i => i.group === 'baby')))}</small></h2>
+    <ul class="catlist">${cats.map(c => {
+      const col = (CAT_COLORS[c.group] || CAT_COLORS.move)[Math.min(idx[c.group]++ || 0, 4)];
+      const pct = total ? c.amt / total * 100 : 0;
+      return `<li><button type="button" data-cat="${esc(c.group)}|${esc(c.name)}">
+        <span class="cn"><em class="g-${esc(c.group)}">${GROUP[c.group] || ''}</em>${esc(c.name)} <small>${c.n}건</small></span>
+        <span class="ca num">${krShort(c.amt)} <small>${pct < 1 && pct > 0 ? '1% 미만' : Math.round(pct) + '%'}</small></span>
+        <span class="cb"><span style="width:${Math.max(c.amt ? 1.5 : 0, c.amt / max * 100)}%;background:${col}"></span></span>
+      </button></li>`;
+    }).join('')}</ul>
+  </div>`;
+}
 function sourceSelect(i){
   const parts = parseSources(i);
   if (parts.length > 1 || (parts.length === 1 && unassignedOf(i))) return `<button type="button" class="srcbtn" data-edit="${esc(i.id)}">${sourceText(i)}</button>`;
@@ -781,11 +828,16 @@ function sourceSelect(i){
 /* ---------- 지출 ---------- */
 function renderFilters(){
   const g = [['all','전체'],['move','이사'],['baby','육아']];
-  $('#f-group').innerHTML = g.map(([k, l]) => `<button type="button" class="chip" data-g="${k}" aria-pressed="${UI.group === k}">${l}</button>`).join('');
+  $('#f-group').innerHTML = g.map(([k, l]) => `<button type="button" class="chip" data-g="${k}" aria-pressed="${UI.group === k && !UI.section}">${l}</button>`).join('')
+    + (UI.section ? `<button type="button" class="chip sec-chip" data-sec-clear aria-pressed="true" aria-label="${esc(UI.section)} 분류 필터 해제">${esc(UI.section)} ×</button>` : '');
   const st = [['all','모든 상태'], ...Object.entries(STATUS).map(([k, v]) => [k, v.label]), ['nosrc','출처 미정']];
   $('#f-status').innerHTML = st.map(([k, l]) => `<button type="button" class="chip" data-s="${k}" aria-pressed="${UI.status === k}">${l}</button>`).join('');
 }
-$('#f-group').addEventListener('click', e => { const b = e.target.closest('[data-g]'); if (b){ UI.group = b.dataset.g; renderFilters(); renderItems(); } });
+$('#f-group').addEventListener('click', e => {
+  if (e.target.closest('[data-sec-clear]')){ UI.section = ''; renderFilters(); renderItems(); return; }
+  const b = e.target.closest('[data-g]');
+  if (b){ UI.group = b.dataset.g; UI.section = ''; renderFilters(); renderItems(); }
+});
 $('#f-status').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (b){ UI.status = b.dataset.s; renderFilters(); renderItems(); } });
 $('#f-q').addEventListener('input', e => { UI.q = e.target.value.trim(); renderItems(); });
 
@@ -795,6 +847,7 @@ function renderItems(){
   const q = UI.q.toLowerCase();
   const rows = S.items.filter(i =>
     (UI.group === 'all' || i.group === UI.group) &&
+    (!UI.section || (i.section || '기타') === UI.section) &&
     (UI.status === 'all' || (UI.status === 'nosrc' ? unassignedOf(i) > 0 : i.status === UI.status)) &&
     (!q || [i.name, i.note, i.section, i.when].join(' ').toLowerCase().includes(q))
   ).sort(byOrder);
@@ -902,14 +955,22 @@ function statusMenu(anchor){
   const i = S.items.find(x => x.id === anchor.dataset.qs);
   if (!i) return;
   const cur = i.status in STATUS ? i.status : 'plan';
-  openPop(anchor, `<div class="pop-h">${esc(i.name)}</div>` + Object.entries(STATUS).map(([k, v]) =>
-    `<button type="button" role="menuitemradio" aria-checked="${k === cur}" data-v="${k}"><span class="dot s-${k}"></span>${v.label}${k === cur ? '<b>✓</b>' : ''}</button>`).join(''),
+  const curKey = cur === 'card' ? 'card:' + (i.billMonth || '') : cur;
+  // 카드결제는 출금월별로 따로 고를 수 있게 (이번 달·다음 달·다다음 달 + 지금 값)
+  const months = billMonths().slice(0, 3);
+  if (cur === 'card' && i.billMonth && !months.includes(i.billMonth)) months.unshift(i.billMonth);
+  const opts = [['plan', STATUS.plan.label, 'plan'],
+    ...months.map(m => ['card:' + m, `카드결제 · ${m} 출금`, 'card']),
+    ['settled', STATUS.settled.label, 'settled'], ['gift', STATUS.gift.label, 'gift']];
+  openPop(anchor, `<div class="pop-h">${esc(i.name)}</div>` + opts.map(([k, label, dot]) =>
+    `<button type="button" role="menuitemradio" aria-checked="${k === curKey}" data-v="${esc(k)}"><span class="dot s-${dot}"></span>${esc(label)}${k === curKey ? '<b>✓</b>' : ''}</button>`).join(''),
     async v => {
-      if (v === cur) return;
+      if (v === curKey) return;
       markFlash(i.id, 'qs');
-      const data = {status: v};
-      if (v === 'card' && !i.billMonth) data.billMonth = '11월';
-      if (await write('items', i.id, data, 'update')) toast(`${STATUS[v].label}(으)로 바꿨어요`);
+      const [st, month] = v.split(':');
+      const data = {status: st};
+      if (st === 'card') data.billMonth = month;
+      if (await write('items', i.id, data, 'update')) toast(st === 'card' ? `카드결제 · ${month} 출금으로 바꿨어요` : `${STATUS[st].label}(으)로 바꿨어요`);
     });
 }
 function sourceMenu(anchor){
@@ -949,7 +1010,7 @@ function syncStatusFields(){
   $('#e-gift-wrap').hidden = st !== 'gift';
 }
 dlg.querySelectorAll('input[name=st]').forEach(r => r.addEventListener('change', () => {
-  if (r.value === 'card' && !$('#e-bill').value) $('#e-bill').value = '11월';
+  if (r.value === 'card' && !$('#e-bill').value) $('#e-bill').value = defaultBill();
   syncStatusFields();
 }));
 function openEditor(id){
@@ -961,7 +1022,10 @@ function openEditor(id){
   $('#e-section').value = i?.section || '';
   $('#e-amount').value = i?.amount || '';
   $('#e-when').value = i?.when || '';
-  $('#e-bill').value = i?.billMonth || '';
+  const bm = billMonths(), curBill = i?.billMonth || '';
+  $('#e-bill').innerHTML = (curBill && !bm.includes(curBill) ? [curBill, ...bm] : bm)
+    .map(m => `<option value="${esc(m)}">${esc(m)} 출금</option>`).join('');
+  $('#e-bill').value = curBill || defaultBill();
   $('#e-gift').value = i?.gift || '';
   formatMoney($('#e-amount')); formatMoney($('#e-gift'));
   $('#e-note').value = i?.note || '';
@@ -1016,7 +1080,7 @@ $('#item-form').addEventListener('submit', async e => {
   const data = {
     name, group: $('#e-group').value, section: $('#e-section').value.trim(),
     amount: toNum($('#e-amount').value), when: $('#e-when').value.trim(), status,
-    source: await readSrcRows(), billMonth: status === 'card' ? ($('#e-bill').value.trim() || '11월') : (prev?.billMonth || ''),
+    source: await readSrcRows(), billMonth: status === 'card' ? ($('#e-bill').value || defaultBill()) : (prev?.billMonth || ''),
     gift: toNum($('#e-gift').value), note: $('#e-note').value.trim(),
     order: prev?.order ?? Date.now(),
   };
