@@ -170,15 +170,32 @@ select.unset{border-color:var(--danger);color:var(--danger)}
 .sec-h{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 6px;font-size:13px;color:var(--muted);font-weight:600}
 .sec-h .g-move{color:var(--move)} .sec-h .g-baby{color:var(--baby)}
 .list{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
-.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:11px 14px;align-items:center}
+.item{border-top:1px solid var(--line)}
 .item:first-child{border-top:0}
-.item:hover{background:var(--sunk)}
+.item-main{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;width:100%;text-align:left;background:none;border:0;padding:11px 14px 6px;align-items:baseline}
+.item-main:hover{background:var(--sunk)}
 .item .nm{font-weight:600;overflow-wrap:anywhere}
-.item .meta{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
-.item .meta .warn{color:var(--danger);font-weight:600}
-.item .side{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
-.item .amt{font-weight:600}
+.item .meta{grid-column:1/-1;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.item .amt{font-weight:600;text-align:right}
 .item .amt.zero{color:var(--muted);font-weight:500}
+.qrow{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 11px}
+.qchip{display:inline-flex;align-items:center;gap:4px;border:1px solid transparent;cursor:pointer;min-height:28px;max-width:100%;font-size:12px}
+.qchip i{font-style:normal;font-size:9px;opacity:.7}
+.qchip.src{background:var(--sunk);color:var(--ink);border-radius:999px;padding:2px 10px;font-weight:500}
+.qchip.src span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qchip.src.unset{background:var(--danger-bg);color:var(--danger);font-weight:600}
+.qchip[aria-expanded="true"]{border-color:currentColor}
+.pop{position:fixed;z-index:25;min-width:190px;max-width:calc(100vw - 16px);max-height:min(60vh,420px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:6px}
+.pop .pop-h{font-size:12px;color:var(--muted);padding:6px 10px 4px;overflow-wrap:anywhere}
+.pop button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:none;border-radius:8px;padding:10px;font-size:15px}
+.pop button:hover,.pop button:focus-visible{background:var(--sunk)}
+.pop button b{margin-left:auto;color:var(--accent)}
+.pop hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;background:currentColor}
+.dot.s-plan{color:var(--plan)} .dot.s-card{color:var(--card)} .dot.s-settled{color:var(--settled)} .dot.s-gift{color:var(--gift)}
+.linkrow{display:flex;align-items:center;gap:6px;width:100%;margin-top:12px;border:0;background:var(--danger-bg);color:var(--danger);border-radius:10px;padding:10px 12px;font-size:13px;text-align:left}
+.linkrow b{margin-left:auto}
+.linkrow i{font-style:normal;font-size:18px}
 .fab{position:fixed;right:max(16px,calc(env(safe-area-inset-right,0px) + 16px));bottom:calc(80px + env(safe-area-inset-bottom,0px));z-index:6;
   border:0;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:13px 20px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.18)}
 @media (min-width:641px){.fab{bottom:calc(24px + env(safe-area-inset-bottom,0px))}}
@@ -208,6 +225,13 @@ label.tog{display:inline-flex;gap:4px;align-items:center;font-size:12px;color:va
 /* 편집 시트 */
 dialog{border:0;padding:0;background:var(--surface);color:var(--ink);border-radius:16px;width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 24px)}
 dialog::backdrop{background:rgba(10,20,16,.45)}
+dialog{cursor:pointer} dialog .sheet{cursor:auto}
+.sheet-top{display:flex;flex-direction:column;gap:10px;touch-action:none}
+.grab{display:none;width:40px;height:5px;border-radius:99px;background:var(--line);margin:-6px auto 0}
+@media (max-width:640px){.grab{display:block}}
+#dlg-title:focus{outline:none}
+@media (prefers-reduced-motion:no-preference){@media (max-width:640px){dialog[open] .sheet{animation:sheetUp .22s ease-out}}}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
 @media (max-width:640px){dialog{margin:auto auto 0;width:100vw;max-width:100vw;border-radius:16px 16px 0 0;max-height:92dvh}}
 .sheet{padding:18px max(18px,env(safe-area-inset-left,0px)) calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px}
 .sheet h3{font-size:17px}
@@ -297,7 +321,7 @@ button.sync{border:0;background:none;padding:4px 0;cursor:pointer}
 
 <dialog id="dlg">
   <form class="sheet" id="item-form" method="dialog">
-    <h3 id="dlg-title">지출 편집</h3>
+    <div class="sheet-top"><div class="grab" aria-hidden="true"></div><h3 id="dlg-title" tabindex="-1" autofocus>지출 편집</h3></div>
     <label class="field"><span>품목</span><input type="text" id="e-name" required></label>
     <div class="two">
       <label class="field"><span>구분</span><select id="e-group"><option value="move">이사</option><option value="baby">육아</option></select></label>
@@ -333,6 +357,7 @@ button.sync{border:0;background:none;padding:4px 0;cursor:pointer}
 <datalist id="dl-section"></datalist>
 <datalist id="dl-when"></datalist>
 <div class="toast" id="toast" hidden></div>
+<div class="pop" id="pop" role="menu" hidden></div>
 <div class="lock" id="lock" hidden>
   <form class="lock-box" id="lock-form">
     <h2>이사·출산 예산장</h2>
@@ -587,21 +612,12 @@ function renderSummary(){
     </div>
     <div class="grid2">
       <div class="stack">${billBlocks}
-        <div class="panel">
-          <h2>어디서 낼지 정할 돈 <small>${unassigned.length}건 · 큰 금액 순</small></h2>
-          ${unassigned.length ? `<ul class="bill-list">${[...unassigned].filter(i => i.status !== 'settled').sort((a, b) => unassignedOf(b) - unassignedOf(a)).slice(0, 8).map(i => `
-            <li><span class="nm">${esc(i.name)}${i.when ? ` <span class="hint">· ${esc(i.when)}</span>` : ''}${parseSources(i).length ? `<br><span class="hint">${sourceText(i)}</span>` : ''}</span>
-              ${remSelect(i)}
-              <span class="amt num">${won(unassignedOf(i))}</span></li>`).join('')}</ul>
-            <div class="row-actions"><button type="button" class="btn" data-goto="nosrc">${unassigned.length}건 전부 보기 ›</button></div>
-            <div class="hint" style="margin-top:8px">여러 곳에서 나눠 낼 지출은 항목을 눌러 출처를 추가하세요.</div>` : '<div class="empty">모든 지출의 출처를 정했어요.</div>'}
-        </div>
       </div>
       <div class="stack">
         <div class="panel">
           <h2>자금별 사용 계획 <small>지출에 출처를 정하면 여기서 빠져요</small></h2>
           <ul class="funds">${fundRows}</ul>
-          <div class="hint" style="margin-top:12px">출처 아직 안 정한 지출: <b class="num">${unassigned.length}건 · ${won(unassignedSum)}</b></div>
+          ${unassigned.length ? `<button type="button" class="linkrow" data-goto="nosrc">출처 아직 안 정한 지출 <b class="num">${unassigned.length}건 · ${won(unassignedSum)}</b><i aria-hidden="true">›</i></button>` : '<div class="hint" style="margin-top:12px">모든 지출의 출처를 정했어요.</div>'}
         </div>
         <div class="panel">
           <h2>진행 상황</h2>
@@ -626,12 +642,6 @@ function renderSummary(){
   el.querySelectorAll('select[data-src]').forEach(s => s.addEventListener('change', async () => {
     const v = await pickFund(s.value);
     if (await write('items', s.dataset.src, {source: v}, 'update')) toast('출처를 바꿨어요');
-  }));
-  el.querySelectorAll('select[data-rem]').forEach(s => s.addEventListener('change', async () => {
-    const i = S.items.find(x => x.id === s.dataset.rem);
-    if (!s.value || !i) return;
-    const v = await pickFund(s.value);
-    if (await write('items', i.id, {source: withRemainder(i, v)}, 'update')) toast('출처를 정했어요');
   }));
   el.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openEditor(b.dataset.edit)));
   el.querySelectorAll('[data-settle]').forEach(b => b.addEventListener('click', async () => {
@@ -662,11 +672,6 @@ function sourceSelect(i){
   if (parts.length > 1 || (parts.length === 1 && unassignedOf(i))) return `<button type="button" class="srcbtn" data-edit="${esc(i.id)}">${sourceText(i)}</button>`;
   const cur = parts[0]?.fund || '';
   return `<select data-src="${esc(i.id)}" class="${cur ? '' : 'unset'}" aria-label="${esc(i.name)} 출처"><option value="">출처 미정</option>${fundOptions(cur)}</select>`;
-}
-// 아직 안 정한 나머지 금액을 어디서 낼지
-function remSelect(i){
-  const label = parseSources(i).length ? '나머지 출처 고르기' : '출처 고르기';
-  return `<select data-rem="${esc(i.id)}" class="unset" aria-label="${esc(i.name)} ${label}"><option value="">${label}</option>${fundOptions('')}</select>`;
 }
 
 /* ---------- 지출 ---------- */
@@ -711,16 +716,109 @@ function itemRow(i){
   const pill = i.status === 'card' ? `카드 · ${esc(i.billMonth || '출금월?')} 출금` : st.label;
   const meta = [];
   if (i.when) meta.push(esc(i.when));
-  if (i.status === 'gift'){ if (i.gift) meta.push('가액 ' + won(i.gift)); }
-  else if (i.source) meta.push(sourceText(i));
-  else if (i.status === 'card') meta.push('<span class="warn">출처 미정</span>');
+  if (i.status === 'gift' && i.gift) meta.push('가액 ' + won(i.gift));
   if (i.note && !/^https?:/.test(i.note)) meta.push(esc(i.note.length > 40 ? i.note.slice(0, 40) + '…' : i.note));
-  return `<button type="button" class="item" data-id="${esc(i.id)}">
-    <span><div class="nm">${esc(i.name)}</div><div class="meta">${meta.join(' · ') || '&nbsp;'}</div></span>
-    <span class="side"><span class="amt num ${i.amount ? '' : 'zero'}">${i.amount ? won(i.amount) : (i.status === 'gift' ? '0원' : '금액 미정')}</span><span class="pill s-${i.status in STATUS ? i.status : 'plan'}">${pill}</span></span>
-  </button>`;
+  const stKey = i.status in STATUS ? i.status : 'plan';
+  return `<div class="item" data-id="${esc(i.id)}">
+    <button type="button" class="item-main" data-open="${esc(i.id)}">
+      <span class="nm">${esc(i.name)}</span>
+      <span class="amt num ${i.amount ? '' : 'zero'}">${i.amount ? won(i.amount) : (i.status === 'gift' ? '0원' : '금액 미정')}</span>
+      ${meta.length ? `<span class="meta">${meta.join(' · ')}</span>` : ''}
+    </button>
+    <div class="qrow">
+      <button type="button" class="qchip pill s-${stKey}" data-qs="${esc(i.id)}" aria-haspopup="menu">${pill}<i aria-hidden="true">▾</i></button>
+      ${i.status === 'gift' ? '' : srcChip(i)}
+    </div>
+  </div>`;
 }
-$('#items-list').addEventListener('click', e => { const b = e.target.closest('.item'); if (b) openEditor(b.dataset.id); });
+function srcChip(i){
+  const parts = parseSources(i), rem = unassignedOf(i);
+  let label, cls = '';
+  if (!parts.length){ label = '출처 미정'; cls = 'unset'; }
+  else {
+    label = parts.map(p => esc(fundName(p.fund) || '삭제된 자금') + (parts.length > 1 || rem ? ' ' + kr(p.amount) : '')).join(' + ');
+    if (rem){ label += ` · 미정 ${kr(rem)}`; cls = 'unset'; }
+  }
+  return `<button type="button" class="qchip src ${cls}" data-qf="${esc(i.id)}" aria-haspopup="menu"><span>← ${label}</span><i aria-hidden="true">▾</i></button>`;
+}
+$('#items-list').addEventListener('click', e => {
+  if (Date.now() - closedAt < 400) return; // 편집 창을 닫은 그 터치가 목록까지 눌리는 것 방지
+  const open = e.target.closest('[data-open]');
+  if (open) return openEditor(open.dataset.open);
+  const qs = e.target.closest('[data-qs]');
+  if (qs) return statusMenu(qs);
+  const qf = e.target.closest('[data-qf]');
+  if (qf) return sourceMenu(qf);
+});
+
+/* ---------- 목록에서 바로 고르는 작은 메뉴 ---------- */
+const pop = $('#pop');
+let popPick = null;
+function openPop(anchor, html, onPick){
+  pop.innerHTML = html;
+  pop.hidden = false;
+  popPick = onPick;
+  const r = anchor.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+  const vw = document.documentElement.clientWidth, vh = window.innerHeight;
+  const left = Math.max(8, Math.min(r.left, vw - w - 8));
+  const top = r.bottom + 6 + h > vh - 8 ? Math.max(8, r.top - 6 - h) : r.bottom + 6;
+  pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  anchor.setAttribute('aria-expanded', 'true');
+  closePop.anchor = anchor;
+  pop.querySelector('button:not([disabled])')?.focus({preventScroll: true});
+}
+function closePop(){
+  if (pop.hidden) return;
+  pop.hidden = true; popPick = null;
+  closePop.anchor?.setAttribute('aria-expanded', 'false');
+}
+pop.addEventListener('click', e => {
+  const b = e.target.closest('button[data-v]');
+  if (!b || !popPick) return;
+  const pick = popPick; closePop(); pick(b.dataset.v);
+});
+document.addEventListener('pointerdown', e => { if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('[data-qs],[data-qf]')) closePop(); }, true);
+window.addEventListener('scroll', closePop, {passive: true});
+window.addEventListener('resize', closePop);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePop(); });
+
+function statusMenu(anchor){
+  if (closePop.anchor === anchor && !pop.hidden) return closePop();
+  const i = S.items.find(x => x.id === anchor.dataset.qs);
+  if (!i) return;
+  const cur = i.status in STATUS ? i.status : 'plan';
+  openPop(anchor, `<div class="pop-h">${esc(i.name)}</div>` + Object.entries(STATUS).map(([k, v]) =>
+    `<button type="button" role="menuitemradio" aria-checked="${k === cur}" data-v="${k}"><span class="dot s-${k}"></span>${v.label}${k === cur ? '<b>✓</b>' : ''}</button>`).join(''),
+    async v => {
+      if (v === cur) return;
+      const data = {status: v};
+      if (v === 'card' && !i.billMonth) data.billMonth = '11월';
+      if (await write('items', i.id, data, 'update')) toast(`${STATUS[v].label}(으)로 바꿨어요`);
+    });
+}
+function sourceMenu(anchor){
+  if (closePop.anchor === anchor && !pop.hidden) return closePop();
+  const i = S.items.find(x => x.id === anchor.dataset.qf);
+  if (!i) return;
+  const parts = parseSources(i), rem = unassignedOf(i);
+  const partial = parts.length && rem > 0;           // 일부만 정함 → 고른 자금이 나머지를 낸다
+  const single = parts.length === 1 && !rem ? parts[0].fund : '';
+  const head = partial ? `남은 ${won(rem)}을 낼 곳`
+    : parts.length > 1 ? '고르면 전액을 한 곳에서 내요' : `${won(i.amount)}을 낼 곳`;
+  const funds = [...S.funds].sort(byOrder).map(f =>
+    `<button type="button" role="menuitemradio" aria-checked="${f.id === single}" data-v="${esc(f.id)}">${esc(f.name)}${isLoan(f) && !/대출/.test(f.name) ? ' (대출)' : ''}${f.id === single ? '<b>✓</b>' : ''}</button>`).join('');
+  openPop(anchor, `<div class="pop-h">${head}</div>${funds}`
+    + (S.funds.some(isLoan) ? '' : '<button type="button" data-v="__newloan">대출 (새로 추가)</button>')
+    + '<hr>'
+    + '<button type="button" data-v="__split">여러 곳으로 나누기…</button>'
+    + (parts.length ? '<button type="button" data-v="">출처 미정으로</button>' : ''),
+    async v => {
+      if (v === '__split') return openEditor(i.id);
+      const fund = await pickFund(v);
+      const source = !fund ? '' : partial ? withRemainder(i, fund) : fund;
+      if (await write('items', i.id, {source}, 'update')) toast(fund ? `${fundName(fund) || '대출'}에서 내기로 했어요` : '출처를 비웠어요');
+    });
+}
 
 /* ---------- 편집 시트 ---------- */
 const dlg = $('#dlg');
@@ -759,11 +857,38 @@ function openEditor(id){
   syncStatusFields();
   const del = $('#e-del'); del.hidden = !i; del.classList.remove('armed'); del.textContent = '삭제';
   fillDatalists();
+  closePop();
   dlg.showModal();
-  if (!i) $('#e-name').focus();
+  if (i) $('#dlg-title').focus({preventScroll: true}); // 기존 항목은 키보드가 올라오지 않게
+  else $('#e-name').focus();
 }
 $('#e-cancel').addEventListener('click', () => dlg.close());
-dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); }); // 바깥 어두운 곳을 누르면 닫기
+// 바깥 어두운 곳을 누르면 닫기: 누른 위치가 창 밖인지 좌표로 판단 (아이폰에서도 확실하게)
+// 손을 뗀 터치가 창이 닫힌 뒤 아래 목록에 눌려 창이 다시 열리지 않도록, click에서 닫고 잠깐 목록 터치를 무시한다
+dlg.addEventListener('click', e => {
+  if (e.target !== dlg) return;
+  const r = $('#item-form').getBoundingClientRect();
+  if (e.clientY < r.top || e.clientY > r.bottom || e.clientX < r.left || e.clientX > r.right){ e.preventDefault(); dlg.close(); }
+});
+let closedAt = 0;
+dlg.addEventListener('close', () => { closedAt = Date.now(); });
+// 위쪽 손잡이를 아래로 끌어내리면 닫기
+(() => {
+  let y0 = null, dy = 0;
+  const form = $('#item-form');
+  dlg.addEventListener('touchstart', e => { if (e.target.closest('.sheet-top')){ y0 = e.touches[0].clientY; dy = 0; } }, {passive: true});
+  dlg.addEventListener('touchmove', e => {
+    if (y0 === null) return;
+    dy = Math.max(0, e.touches[0].clientY - y0);
+    form.style.transform = `translateY(${dy}px)`;
+  }, {passive: true});
+  dlg.addEventListener('touchend', () => {
+    if (y0 === null) return;
+    form.style.transform = '';
+    if (dy > 80) dlg.close();
+    y0 = null;
+  });
+})();
 $('#fab').addEventListener('click', () => openEditor(null));
 $('#item-form').addEventListener('submit', async e => {
   e.preventDefault();
