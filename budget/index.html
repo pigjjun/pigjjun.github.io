@@ -486,6 +486,15 @@ function kr(n){
   if (man) p.push(man.toLocaleString('ko-KR') + '만');
   return (neg ? '-' : '') + p.join(' ') + '원';
 }
+// 짧게 읽기: 150,000,000 → "1억 5천만원", 147,337,570 → "1억 4,733만원"
+function krShort(n){
+  n = Math.round(n || 0);
+  if (n < 10000) return n.toLocaleString('ko-KR') + '원';
+  const eok = Math.floor(n / 1e8), man = Math.floor(n % 1e8 / 1e4), p = [];
+  if (eok) p.push(eok.toLocaleString('ko-KR') + '억');
+  if (man) p.push(man % 1000 === 0 ? man / 1000 + '천만' : man.toLocaleString('ko-KR') + '만');
+  return p.join(' ') + '원';
+}
 const sum = (arr, f = x => x.amount) => arr.reduce((a, x) => a + (Number(f(x)) || 0), 0);
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.name || a.text).localeCompare(String(b.name || b.text), 'ko');
 const fundName = id => S.funds.find(f => f.id === id)?.name;
@@ -696,8 +705,8 @@ function renderSummary(){
     <div>
       <div class="kpis">
         <div class="kpi"><span class="eyebrow">총 지출 예정</span><b class="num" title="${won(total)}">${kr(total)}</b><span class="sub num">${won(total)}</span></div>
-        <div class="kpi"><span class="eyebrow">마련된 자금<small>대출 빼고</small></span><b class="num" title="${won(fundTotal)}">${kr(fundTotal)}</b><span class="sub num">${won(fundTotal)}</span></div>
-        <div class="kpi loan"><span class="eyebrow">${need >= 0 ? '대출 필요' : '여유 자금'}</span><b class="num">${kr(Math.abs(need))}</b><span class="sub num">${!loanTotal ? won(Math.abs(need)) : gap > 0 ? `대출 ${kr(loanTotal)} 잡음 · ${kr(gap)} 더 필요` : `대출 ${kr(loanTotal)} 잡음 · 충분해요`}</span></div>
+        <div class="kpi"><span class="eyebrow">마련된 자금<small>대출 제외</small></span><b class="num" title="${won(fundTotal)}">${kr(fundTotal)}</b><span class="sub num">${won(fundTotal)}</span></div>
+        <div class="kpi loan"><span class="eyebrow">${need >= 0 ? '대출 필요' : '여유 자금'}</span><b class="num">${kr(Math.abs(need))}</b><span class="sub num">${!loanTotal ? won(Math.abs(need)) : gap > 0 ? `대출 ${krShort(loanTotal)} 예정 · ${krShort(gap)} 더 필요` : `대출 ${krShort(loanTotal)} 예정`}</span></div>
       </div>
       <div class="splitbar" aria-hidden="true">
         <span style="width:${total ? sum(move) / total * 100 : 0}%;background:var(--move)"></span>
