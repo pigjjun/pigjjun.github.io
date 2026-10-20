@@ -231,6 +231,19 @@ button.sync{border:0;background:none;padding:4px 0;cursor:pointer}
 @media (max-width:640px){ body.typing nav.tabs, body.typing .fab{display:none} }
 .todos label{display:flex;gap:10px;align-items:center;flex:1;min-width:0;cursor:pointer;padding:2px 0}
 .x.armed{color:var(--danger);font-size:13px;font-weight:600}
+.srcfield{grid-column:1/-1}
+.srcfield em{font-style:normal;font-weight:400}
+.srcrows{display:flex;flex-direction:column;gap:6px}
+.srcrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,9em) auto;gap:6px;align-items:center}
+.srcrow:first-child{grid-template-columns:minmax(0,1fr) auto}
+.srcrow .src-amt{text-align:right}
+.src-rest{font-size:13px;color:var(--muted);white-space:nowrap}
+.srcfoot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px}
+.btn.small{padding:5px 10px;font-size:13px}
+.srcbtn{grid-column:1/-1;text-align:left;border:1px dashed var(--line);background:none;border-radius:8px;padding:7px 10px;font-size:13px;color:var(--ink)}
+.warn{color:var(--danger);font-weight:600}
+.edit-table tfoot tr.sub td{font-weight:500;border-top:0;color:var(--muted)}
+.kpi .eyebrow small{font-weight:400}
 .lock{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
 .lock-box{width:min(340px,100%);display:flex;flex-direction:column;gap:12px;text-align:center}
 .lock-box h2{font-size:20px}
@@ -303,7 +316,10 @@ button.sync{border:0;background:none;padding:4px 0;cursor:pointer}
       </div>
     </div>
     <div class="two">
-      <label class="field"><span>어디서 나갈 돈?</span><select id="e-source"></select></label>
+      <div class="field srcfield"><span>어디서 나갈 돈? <em class="hint">나눠 낼 수 있어요</em></span>
+        <div id="e-sources" class="srcrows"></div>
+        <div class="srcfoot"><button type="button" class="btn small" id="e-src-add">+ 출처 추가</button><span id="e-src-left" class="hint"></span></div>
+      </div>
       <label class="field" id="e-bill-wrap"><span>카드 출금월</span><input type="text" id="e-bill" placeholder="11월"></label>
       <label class="field" id="e-gift-wrap"><span>선물 가액 (예산 제외)</span><input type="text" id="e-gift" class="money" data-read="e-gift-read" inputmode="numeric" pattern="[0-9,]*" autocomplete="off"><small class="read" id="e-gift-read"></small></label>
     </div>
@@ -359,6 +375,36 @@ const sum = (arr, f = x => x.amount) => arr.reduce((a, x) => a + (Number(f(x)) |
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.name || a.text).localeCompare(String(b.name || b.text), 'ko');
 const fundName = id => S.funds.find(f => f.id === id)?.name;
 const activeFunds = () => S.funds.filter(f => !f.excluded);
+// 이름에 '대출'이 들어가거나 id가 loan으로 시작하면 대출로 따로 계산한다
+const isLoan = f => !!f && (/^loan/.test(f.id) || String(f.name || '').includes('대출'));
+const assetFunds = () => S.funds.filter(f => !f.excluded && !isLoan(f));
+const loanFunds = () => S.funds.filter(f => !f.excluded && isLoan(f));
+/* 출처는 source 한 칸에 저장한다.
+   "jeonse" = 전액 전세금, "jeonse,loan:15000000" = 대출 1,500만원 + 나머지 전세금,
+   "loan:15000000" = 대출 1,500만원만 정하고 나머지는 미정. 금액 없는 칸이 '나머지'다. */
+function parseSources(i){
+  const parts = String(i.source || '').split(',').map(s => s.trim()).filter(Boolean).map(s => {
+    const [fund, amt] = s.split(':');
+    return {fund, amount: amt === undefined ? null : toNum(amt)};
+  });
+  const fixed = parts.reduce((a, p) => a + (p.amount ?? 0), 0);
+  const free = parts.filter(p => p.amount === null);
+  free.forEach(p => { p.amount = Math.max(0, (i.amount || 0) - fixed) / free.length; p.rest = true; });
+  return parts;
+}
+const unassignedOf = i => i.status === 'gift' ? 0 : Math.max(0, (i.amount || 0) - sum(parseSources(i)));
+// 남은 금액을 이 자금에서 내도록 추가 (기존에 정한 몫은 그대로)
+function withRemainder(i, fund){
+  const fixed = parseSources(i).filter(p => !p.rest).map(p => p.fund + ':' + Math.round(p.amount));
+  return [fund, ...fixed].join(',');
+}
+function sourceText(i){
+  const parts = parseSources(i);
+  if (!parts.length) return '';
+  const rem = unassignedOf(i);
+  const txt = parts.map(p => esc(fundName(p.fund) || '삭제된 자금') + (parts.length > 1 || rem ? ' ' + kr(p.amount) : '')).join(' + ');
+  return '← ' + txt + (rem ? ` · <span class="warn">미정 ${kr(rem)}</span>` : '');
+}
 
 function toast(msg){
   const t = $('#toast'); t.textContent = msg; t.hidden = false;
@@ -476,7 +522,8 @@ function renderSummary(){
     return;
   }
   const items = S.items, move = items.filter(i => i.group === 'move'), baby = items.filter(i => i.group === 'baby');
-  const total = sum(items), fundTotal = sum(activeFunds()), loan = total - fundTotal;
+  const total = sum(items), fundTotal = sum(assetFunds()), need = total - fundTotal;
+  const loanTotal = sum(loanFunds()), gap = need - loanTotal;
 
   // 카드 출금 대기 (월별)
   const card = items.filter(i => i.status === 'card').sort(byOrder);
@@ -484,7 +531,10 @@ function renderSummary(){
   const billBlocks = months.map(m => {
     const rows = card.filter(i => (i.billMonth || '출금월 미정') === m);
     const bySrc = {};
-    rows.forEach(i => { const k = i.source || ''; bySrc[k] = (bySrc[k] || 0) + (i.amount || 0); });
+    rows.forEach(i => {
+      parseSources(i).forEach(p => { bySrc[p.fund] = (bySrc[p.fund] || 0) + p.amount; });
+      const r = unassignedOf(i); if (r) bySrc[''] = (bySrc[''] || 0) + r;
+    });
     const srcChips = Object.entries(bySrc).sort((a, b) => (a[0] === '') - (b[0] === '') || b[1] - a[1])
       .map(([k, v]) => `<span class="${k ? '' : 'unset'}">${esc(k ? fundName(k) || '삭제된 자금' : '출처 미정')} ${won(v)}</span>`).join('');
     return `<div class="panel">
@@ -504,17 +554,18 @@ function renderSummary(){
 
   // 자금별 계획
   const fundRows = [...S.funds].sort(byOrder).map(f => {
-    const used = sum(items.filter(i => i.source === f.id && i.status !== 'gift'));
+    const used = items.filter(i => i.status !== 'gift').reduce((a, i) => a + sum(parseSources(i).filter(p => p.fund === f.id)), 0);
     const pct = f.amount ? Math.min(100, used / f.amount * 100) : (used ? 100 : 0);
     const left = (f.amount || 0) - used;
-    return `<li class="${f.excluded ? 'excl' : ''}">
-      <div class="top"><b>${esc(f.name)}${f.excluded ? ' · 예산 제외' : ''}</b><span class="num">${won(f.amount)}</span></div>
-      <div class="bar"><span class="${left < 0 ? 'over' : ''}" style="width:${pct}%"></span></div>
-      <div class="meta num">쓸 곳 정함 ${won(used)} · ${left < 0 ? '<b style="color:var(--danger)">' + won(-left) + ' 부족</b>' : '남음 ' + won(left)}</div>
+    const loanNoAmt = isLoan(f) && !f.amount;
+    return `<li class="${f.excluded ? 'excl' : ''}${isLoan(f) ? ' loanf' : ''}">
+      <div class="top"><b>${esc(f.name)}${f.excluded ? ' · 예산 제외' : ''}${isLoan(f) && !/대출/.test(f.name) ? ' · 대출' : ''}</b><span class="num">${loanNoAmt ? '금액 미정' : won(f.amount)}</span></div>
+      <div class="bar"><span class="${left < 0 && !loanNoAmt ? 'over' : ''}" style="width:${pct}%"></span></div>
+      <div class="meta num">쓸 곳 정함 ${won(used)} · ${loanNoAmt ? '대출 받을 금액을 자금 탭에서 입력하세요' : left < 0 ? '<b style="color:var(--danger)">' + won(-left) + ' 부족</b>' : '남음 ' + won(left)}</div>
     </li>`;
   }).join('');
-  const unassigned = items.filter(i => !i.source && i.status !== 'gift' && i.amount);
-  const unassignedSum = sum(unassigned);
+  const unassigned = items.filter(i => unassignedOf(i) > 0);
+  const unassignedSum = sum(unassigned, unassignedOf);
 
   // 상태별
   const cnt = st => { const r = items.filter(i => i.status === st); return {n: r.length, amt: sum(r), gift: sum(r, x => x.gift)}; };
@@ -525,8 +576,8 @@ function renderSummary(){
     <div>
       <div class="kpis">
         <div class="kpi"><span class="eyebrow">총 지출 예정</span><b class="num" title="${won(total)}">${kr(total)}</b><span class="sub num">${won(total)}</span></div>
-        <div class="kpi"><span class="eyebrow">마련된 자금</span><b class="num" title="${won(fundTotal)}">${kr(fundTotal)}</b><span class="sub num">${won(fundTotal)}</span></div>
-        <div class="kpi loan"><span class="eyebrow">${loan >= 0 ? '대출 필요' : '여유 자금'}</span><b class="num">${kr(Math.abs(loan))}</b><span class="sub num">${won(Math.abs(loan))}</span></div>
+        <div class="kpi"><span class="eyebrow">마련된 자금 <small>(대출 빼고)</small></span><b class="num" title="${won(fundTotal)}">${kr(fundTotal)}</b><span class="sub num">${won(fundTotal)}</span></div>
+        <div class="kpi loan"><span class="eyebrow">${need >= 0 ? '대출 필요' : '여유 자금'}</span><b class="num">${kr(Math.abs(need))}</b><span class="sub num">${!loanTotal ? won(Math.abs(need)) : gap > 0 ? `대출 ${kr(loanTotal)} 잡음 · ${kr(gap)} 더 필요` : `대출 ${kr(loanTotal)} 잡음 · 충분해요`}</span></div>
       </div>
       <div class="splitbar" aria-hidden="true">
         <span style="width:${total ? sum(move) / total * 100 : 0}%;background:var(--move)"></span>
@@ -538,10 +589,12 @@ function renderSummary(){
       <div class="stack">${billBlocks}
         <div class="panel">
           <h2>어디서 낼지 정할 돈 <small>${unassigned.length}건 · 큰 금액 순</small></h2>
-          ${unassigned.length ? `<ul class="bill-list">${[...unassigned].filter(i => i.status !== 'settled').sort((a, b) => b.amount - a.amount).slice(0, 8).map(i => `
-            <li><span class="nm">${esc(i.name)}${i.when ? ` <span class="hint">· ${esc(i.when)}</span>` : ''}</span>
-              ${sourceSelect(i)}
-              <span class="amt num">${won(i.amount)}</span></li>`).join('')}</ul>` : '<div class="empty">모든 지출의 출처를 정했어요.</div>'}
+          ${unassigned.length ? `<ul class="bill-list">${[...unassigned].filter(i => i.status !== 'settled').sort((a, b) => unassignedOf(b) - unassignedOf(a)).slice(0, 8).map(i => `
+            <li><span class="nm">${esc(i.name)}${i.when ? ` <span class="hint">· ${esc(i.when)}</span>` : ''}${parseSources(i).length ? `<br><span class="hint">${sourceText(i)}</span>` : ''}</span>
+              ${remSelect(i)}
+              <span class="amt num">${won(unassignedOf(i))}</span></li>`).join('')}</ul>
+            <div class="row-actions"><button type="button" class="btn" data-goto="nosrc">${unassigned.length}건 전부 보기 ›</button></div>
+            <div class="hint" style="margin-top:8px">여러 곳에서 나눠 낼 지출은 항목을 눌러 출처를 추가하세요.</div>` : '<div class="empty">모든 지출의 출처를 정했어요.</div>'}
         </div>
       </div>
       <div class="stack">
@@ -571,8 +624,16 @@ function renderSummary(){
     renderFilters(); renderItems(); showTab('items'); window.scrollTo(0, 0);
   }));
   el.querySelectorAll('select[data-src]').forEach(s => s.addEventListener('change', async () => {
-    if (await write('items', s.dataset.src, {source: s.value}, 'update')) toast('출처를 바꿨어요');
+    const v = await pickFund(s.value);
+    if (await write('items', s.dataset.src, {source: v}, 'update')) toast('출처를 바꿨어요');
   }));
+  el.querySelectorAll('select[data-rem]').forEach(s => s.addEventListener('change', async () => {
+    const i = S.items.find(x => x.id === s.dataset.rem);
+    if (!s.value || !i) return;
+    const v = await pickFund(s.value);
+    if (await write('items', i.id, {source: withRemainder(i, v)}, 'update')) toast('출처를 정했어요');
+  }));
+  el.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openEditor(b.dataset.edit)));
   el.querySelectorAll('[data-settle]').forEach(b => b.addEventListener('click', async () => {
     if (!b.classList.contains('armed')){
       b.classList.add('armed', 'btn', 'danger'); b.textContent = '한 번 더 누르면 정산 완료로 바꿔요';
@@ -585,9 +646,27 @@ function renderSummary(){
     if (await writeMany('items', rows.map(i => ({id: i.id, data: {status: 'settled'}})))) toast(`${rows.length}건을 정산 완료로 바꿨어요`);
   }));
 }
+function fundOptions(selected){
+  const opts = [...S.funds].sort(byOrder).map(f => `<option value="${esc(f.id)}"${f.id === selected ? ' selected' : ''}>${esc(f.name)}</option>`).join('');
+  return opts + (S.funds.some(isLoan) ? '' : '<option value="__newloan">대출 (새로 추가)</option>');
+}
+// 대출 자금이 없으면 '대출'을 만들고 그 id를 돌려준다
+async function pickFund(v){
+  if (v !== '__newloan') return v;
+  if (!S.funds.some(f => f.id === 'loan')) await write('funds', 'loan', {name: '대출', amount: 0, excluded: false, order: 99});
+  return 'loan';
+}
+// 출처 한 곳(또는 미정)이면 고르는 칸, 여러 곳이면 눌러서 편집
 function sourceSelect(i){
-  const opts = [...S.funds].sort(byOrder).map(f => `<option value="${esc(f.id)}"${f.id === i.source ? ' selected' : ''}>${esc(f.name)}</option>`).join('');
-  return `<select data-src="${esc(i.id)}" class="${i.source ? '' : 'unset'}" aria-label="${esc(i.name)} 출처"><option value="">출처 미정</option>${opts}</select>`;
+  const parts = parseSources(i);
+  if (parts.length > 1 || (parts.length === 1 && unassignedOf(i))) return `<button type="button" class="srcbtn" data-edit="${esc(i.id)}">${sourceText(i)}</button>`;
+  const cur = parts[0]?.fund || '';
+  return `<select data-src="${esc(i.id)}" class="${cur ? '' : 'unset'}" aria-label="${esc(i.name)} 출처"><option value="">출처 미정</option>${fundOptions(cur)}</select>`;
+}
+// 아직 안 정한 나머지 금액을 어디서 낼지
+function remSelect(i){
+  const label = parseSources(i).length ? '나머지 출처 고르기' : '출처 고르기';
+  return `<select data-rem="${esc(i.id)}" class="unset" aria-label="${esc(i.name)} ${label}"><option value="">${label}</option>${fundOptions('')}</select>`;
 }
 
 /* ---------- 지출 ---------- */
@@ -607,7 +686,7 @@ function renderItems(){
   const q = UI.q.toLowerCase();
   const rows = S.items.filter(i =>
     (UI.group === 'all' || i.group === UI.group) &&
-    (UI.status === 'all' || (UI.status === 'nosrc' ? (!i.source && i.status !== 'gift' && i.amount) : i.status === UI.status)) &&
+    (UI.status === 'all' || (UI.status === 'nosrc' ? unassignedOf(i) > 0 : i.status === UI.status)) &&
     (!q || [i.name, i.note, i.section, i.when].join(' ').toLowerCase().includes(q))
   ).sort(byOrder);
   if (!rows.length){
@@ -633,7 +712,7 @@ function itemRow(i){
   const meta = [];
   if (i.when) meta.push(esc(i.when));
   if (i.status === 'gift'){ if (i.gift) meta.push('가액 ' + won(i.gift)); }
-  else if (i.source) meta.push('← ' + esc(fundName(i.source) || '삭제된 자금'));
+  else if (i.source) meta.push(sourceText(i));
   else if (i.status === 'card') meta.push('<span class="warn">출처 미정</span>');
   if (i.note && !/^https?:/.test(i.note)) meta.push(esc(i.note.length > 40 ? i.note.slice(0, 40) + '…' : i.note));
   return `<button type="button" class="item" data-id="${esc(i.id)}">
@@ -671,8 +750,11 @@ function openEditor(id){
   $('#e-gift').value = i?.gift || '';
   formatMoney($('#e-amount')); formatMoney($('#e-gift'));
   $('#e-note').value = i?.note || '';
-  $('#e-source').innerHTML = '<option value="">출처 미정</option>' + [...S.funds].sort(byOrder).map(f => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('');
-  $('#e-source').value = i?.source || '';
+  // 첫 줄은 '나머지'(금액 자동), 둘째 줄부터는 금액을 정한다
+  const parts = i ? parseSources(i) : [];
+  const rest = parts.find(p => p.rest);
+  const rows = [{fund: rest ? rest.fund : ''}, ...parts.filter(p => !p.rest).map(p => ({fund: p.fund, amount: p.amount}))];
+  renderSrcRows(rows);
   (dlg.querySelector(`input[name=st][value="${i?.status || 'plan'}"]`) || dlg.querySelector('input[name=st][value=plan]')).checked = true;
   syncStatusFields();
   const del = $('#e-del'); del.hidden = !i; del.classList.remove('armed'); del.textContent = '삭제';
@@ -692,10 +774,12 @@ $('#item-form').addEventListener('submit', async e => {
   const data = {
     name, group: $('#e-group').value, section: $('#e-section').value.trim(),
     amount: toNum($('#e-amount').value), when: $('#e-when').value.trim(), status,
-    source: $('#e-source').value, billMonth: status === 'card' ? ($('#e-bill').value.trim() || '11월') : (prev?.billMonth || ''),
+    source: await readSrcRows(), billMonth: status === 'card' ? ($('#e-bill').value.trim() || '11월') : (prev?.billMonth || ''),
     gift: toNum($('#e-gift').value), note: $('#e-note').value.trim(),
     order: prev?.order ?? Date.now(),
   };
+  const srcRows = srcRowsNow();
+  if (srcRows.slice(1).reduce((a, r) => a + (r.fund ? r.amount : 0), 0) > data.amount){ toast('나눈 금액 합이 지출 금액보다 커요'); return; }
   $('#e-save').disabled = true;
   const ok = await write('items', UI.editing || newId('i'), data);
   $('#e-save').disabled = false;
@@ -706,6 +790,50 @@ $('#e-del').addEventListener('click', async e => {
   if (!b.classList.contains('armed')){ b.classList.add('armed'); b.textContent = '정말 삭제'; return; }
   if (await write('items', UI.editing, null, 'delete')){ dlg.close(); toast('삭제했어요'); }
 });
+
+function renderSrcRows(rows){
+  const box = $('#e-sources');
+  box.innerHTML = rows.map((r, k) => `<div class="srcrow">
+      <select class="src-fund" aria-label="출처 ${k + 1}"><option value="">${k ? '고르세요' : '출처 미정'}</option>${fundOptions(r.fund)}</select>
+      ${k ? `<input type="text" class="src-amt money" inputmode="numeric" pattern="[0-9,]*" autocomplete="off" placeholder="금액" aria-label="출처 ${k + 1} 금액" value="${r.amount ? Number(r.amount).toLocaleString('ko-KR') : ''}">
+             <button type="button" class="x" data-rm="${k}" aria-label="이 출처 빼기">×</button>`
+           : `<span class="src-rest num" id="e-src-rest"></span>`}
+    </div>`).join('');
+  updateSrcLeft();
+}
+function srcRowsNow(){
+  return [...$('#e-sources').querySelectorAll('.srcrow')].map((el, k) => ({
+    fund: el.querySelector('.src-fund').value, amount: k ? toNum(el.querySelector('.src-amt').value) : null,
+  }));
+}
+function updateSrcLeft(){
+  const rows = srcRowsNow(), total = toNum($('#e-amount').value);
+  const fixed = rows.slice(1).reduce((a, r) => a + (r.fund ? r.amount : 0), 0);
+  const rest = total - fixed;
+  const restEl = $('#e-src-rest');
+  if (restEl) restEl.textContent = rows.length > 1 ? (rest >= 0 ? '나머지 ' + won(rest) : '') : '전액';
+  $('#e-src-left').innerHTML = rest < 0 ? `<span class="warn">나눈 금액이 ${won(-rest)} 많아요</span>`
+    : rows.length > 1 && !rows[0].fund && rest > 0 ? `${won(rest)} 아직 미정` : '';
+}
+$('#e-sources').addEventListener('input', updateSrcLeft);
+$('#e-sources').addEventListener('change', updateSrcLeft);
+$('#e-amount').addEventListener('input', updateSrcLeft);
+$('#e-sources').addEventListener('click', e => {
+  const b = e.target.closest('[data-rm]');
+  if (!b) return;
+  const rows = srcRowsNow(); rows.splice(Number(b.dataset.rm), 1); renderSrcRows(rows);
+});
+$('#e-src-add').addEventListener('click', () => {
+  const rows = srcRowsNow(); rows.push({fund: '', amount: 0}); renderSrcRows(rows);
+  $('#e-sources').querySelectorAll('.src-fund')[rows.length - 1].focus();
+});
+// 화면의 출처 줄들을 저장용 문자열로: "나머지자금,자금:금액,..."
+async function readSrcRows(){
+  const rows = srcRowsNow();
+  for (const r of rows) r.fund = await pickFund(r.fund);
+  const fixed = rows.slice(1).filter(r => r.fund && r.amount > 0).map(r => r.fund + ':' + r.amount);
+  return [rows[0].fund, ...fixed].filter(Boolean).join(',');
+}
 
 /* ---------- 자금 · 생활비 ---------- */
 function renderFunds(){
@@ -719,11 +847,13 @@ function renderFunds(){
       <table class="edit-table"><tbody>${funds.map(f => `<tr>
         <td><input type="text" data-col="funds" data-id="${esc(f.id)}" data-k="name" value="${esc(f.name)}" aria-label="자금 이름"></td>
         <td class="r"><input type="text" class="amt-in num money" inputmode="numeric" pattern="[0-9,]*" enterkeyhint="done" autocomplete="off" size="11" data-col="funds" data-id="${esc(f.id)}" data-k="amount" value="${Number(f.amount || 0).toLocaleString('ko-KR')}" aria-label="${esc(f.name)} 금액"></td>
-        <td class="r"><label class="tog"><input type="checkbox" data-excl="${esc(f.id)}" ${f.excluded ? 'checked' : ''}>제외</label></td>
+        <td class="r">${isLoan(f) ? '<span class="pill s-card">대출</span>' : `<label class="tog"><input type="checkbox" data-excl="${esc(f.id)}" ${f.excluded ? 'checked' : ''}>제외</label>`}</td>
         <td class="r"><button type="button" class="x" data-del="funds" data-id="${esc(f.id)}" aria-label="${esc(f.name)} 삭제">×</button></td>
       </tr>`).join('')}</tbody>
-      <tfoot><tr><td>합계 (제외 빼고)</td><td class="r num">${won(sum(activeFunds()))}</td><td></td><td></td></tr></tfoot></table>
-      <div class="addline"><input type="text" id="new-fund" placeholder="새 자금 (예: 적금)"><button type="button" class="btn" id="add-fund">추가</button></div>
+      <tfoot><tr><td>가진 돈 합계</td><td class="r num">${won(sum(assetFunds()))}</td><td></td><td></td></tr>
+        ${loanFunds().length ? `<tr class="sub"><td>대출 합계</td><td class="r num">${won(sum(loanFunds()))}</td><td></td><td></td></tr>` : ''}</tfoot></table>
+      <div class="addline"><input type="text" id="new-fund" placeholder="새 자금 (예: 적금, 신용대출)"><button type="button" class="btn" id="add-fund">추가</button></div>
+      <p class="hint">이름에 ‘대출’이 들어간 자금은 대출로 따로 계산해요. 대출 받을 금액을 적어 두면 현황에서 얼마나 더 필요한지 보여 줘요.</p>
     </div>
     <div class="panel">
       <h2>매달 생활비 예산 <small>월 ${won(sum(monthly))}</small></h2>
