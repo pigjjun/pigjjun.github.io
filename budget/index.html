@@ -205,7 +205,14 @@ select.unset{border-color:var(--danger);color:var(--danger)}
 .edit-table td{padding:6px 4px;border-top:1px solid var(--line);vertical-align:middle}
 .edit-table input[type=text]{width:100%}
 .edit-table td.r{text-align:right;width:1%;white-space:nowrap}
-.edit-table .amt-in{text-align:right;width:8.5em}
+.edit-table .amt-in{text-align:right;width:8.5em;min-width:7.5em}
+.edit-table td:first-child input{min-width:5em}
+@media (max-width:640px){
+  .edit-table td{padding:5px 2px}
+  .edit-table .amt-in{width:7.2em;min-width:7.2em;padding-inline:8px}
+  .edit-table td:first-child input{padding-inline:8px}
+  label.tog{gap:2px}
+}
 .edit-table td:first-child{width:auto}
 .edit-table tfoot td{font-weight:700;border-top:2px solid var(--line)}
 .x{border:0;background:none;color:var(--muted);font-size:18px;padding:2px 6px;border-radius:6px}
