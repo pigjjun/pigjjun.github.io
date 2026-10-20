@@ -124,8 +124,6 @@ nav.tabs button[aria-current="page"]{background:var(--accent);color:var(--accent
   .kpi b{grid-column:2;grid-row:1;text-align:right;font-size:20px}
   .kpi span.sub{grid-column:2;grid-row:2;text-align:right}
 }
-.splitbar{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--sunk);margin-top:10px}
-.splitbar span{display:block;height:100%}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
 .legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:middle}
 
@@ -328,7 +326,6 @@ nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2
 .fab{box-shadow:0 6px 18px color-mix(in srgb,var(--accent) 35%,transparent)}
 
 .bar span{transition:width .6s var(--ease)}
-.splitbar span{transition:width .6s var(--ease)}
 
 /* 상태 칩: 왼쪽 점으로 색을 한 번 더 */
 .qchip.pill{padding:3px 10px 3px 8px}
@@ -364,18 +361,6 @@ nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2
 .fab{display:inline-flex;align-items:center;gap:6px}
 .fab svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;flex:none}
 @media (max-width:640px){.fab{width:56px;height:56px;padding:0;justify-content:center}.fab span{display:none}.fab svg{width:26px;height:26px}}
-.cats h2 small{font-weight:500}
-.catlist{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
-.catlist button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;width:100%;text-align:left;border:0;background:none;border-radius:10px;padding:8px 8px 9px;margin:0 -8px;width:calc(100% + 16px)}
-.catlist button:hover,.catlist button:active{background:var(--sunk)}
-.catlist .cn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:14px}
-.catlist .cn em{font-style:normal;font-size:11px;font-weight:700;margin-right:6px;padding:1px 6px;border-radius:999px;background:var(--sunk)}
-.catlist .cn em.g-move{color:var(--move)} .catlist .cn em.g-baby{color:var(--baby)}
-.catlist .cn small,.catlist .ca small{font-weight:400;color:var(--muted);font-size:12px}
-.catlist .ca{font-weight:600;font-size:14px;text-align:right;white-space:nowrap}
-.catlist .cb{grid-column:1/-1;height:8px;background:var(--sunk);border-radius:99px;overflow:hidden}
-.catlist .cb span{display:block;height:100%;border-radius:99px;transition:width .6s var(--ease)}
-.sec-chip{border-color:var(--accent)!important;background:var(--accent)!important;color:var(--accent-ink)!important}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes popIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
@@ -487,7 +472,7 @@ const COLS = ['items','funds','monthly','todos'];
 const S = {items:[], funds:[], monthly:[], todos:[]};
 const loaded = new Set();
 let db = null, canWrite = true;
-const UI = {tab:'summary', group:'all', section:'', status:'all', q:'', editing:null};
+const UI = {tab:'summary', group:'all', status:'all', q:'', editing:null};
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -733,7 +718,6 @@ function renderSummary(){
         <div class="kpi loan"><span class="eyebrow">${need >= 0 ? '대출 필요' : '여유 자금'}</span><b class="num">${kr(Math.abs(need))}</b><span class="sub num">${!loanTotal ? won(Math.abs(need)) : gap > 0 ? `대출 ${krShort(loanTotal)} 예정 · ${krShort(gap)} 더 필요` : `대출 ${krShort(loanTotal)} 예정`}</span></div>
       </div>
     </div>
-    ${catPanel(items, total)}
     <div class="grid2">
       <div class="stack">${billBlocks}
       </div>
@@ -759,13 +743,8 @@ function renderSummary(){
       </div>
     </div>`;
 
-  el.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => {
-    const [g, ...rest] = b.dataset.cat.split('|');
-    UI.group = g; UI.section = rest.join('|'); UI.status = 'all'; UI.q = ''; $('#f-q').value = '';
-    renderFilters(); renderItems(); showTab('items'); window.scrollTo(0, 0);
-  }));
   el.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => {
-    UI.status = b.dataset.goto; UI.group = 'all'; UI.section = ''; UI.q = ''; $('#f-q').value = '';
+    UI.status = b.dataset.goto; UI.group = 'all'; UI.q = ''; $('#f-q').value = '';
     renderFilters(); renderItems(); showTab('items'); window.scrollTo(0, 0);
   }));
   el.querySelectorAll('select[data-src]').forEach(s => s.addEventListener('change', async () => {
@@ -796,32 +775,6 @@ async function pickFund(v){
   return 'loan';
 }
 // 출처 한 곳(또는 미정)이면 고르는 칸, 여러 곳이면 눌러서 편집
-// 분류(소분류)별 지출: 분류마다 한 줄, 막대 길이는 가장 큰 분류 기준 (작은 분류도 보이게)
-const CAT_COLORS = {move: ['#2f6db3', '#4f8ad0', '#7aa7de', '#a3c2ea', '#c5d8f2'], baby: ['#d0628b', '#dd82a4', '#e9a3be', '#f1c2d4', '#f7dae5']};
-function catPanel(items, total){
-  const map = new Map();
-  for (const i of items){
-    const key = i.group + '|' + (i.section || '기타');
-    const c = map.get(key) || {group: i.group, name: i.section || '기타', amt: 0, n: 0};
-    c.amt += i.amount || 0; c.n++;
-    map.set(key, c);
-  }
-  const cats = [...map.values()].sort((a, b) => b.amt - a.amt);
-  const max = Math.max(1, ...cats.map(c => c.amt));
-  const idx = {move: 0, baby: 0};
-  return `<div class="panel cats">
-    <h2>분류별 지출 <small>이사 ${krShort(sum(items.filter(i => i.group === 'move')))} · 육아 ${krShort(sum(items.filter(i => i.group === 'baby')))}</small></h2>
-    <ul class="catlist">${cats.map(c => {
-      const col = (CAT_COLORS[c.group] || CAT_COLORS.move)[Math.min(idx[c.group]++ || 0, 4)];
-      const pct = total ? c.amt / total * 100 : 0;
-      return `<li><button type="button" data-cat="${esc(c.group)}|${esc(c.name)}">
-        <span class="cn"><em class="g-${esc(c.group)}">${GROUP[c.group] || ''}</em>${esc(c.name)} <small>${c.n}건</small></span>
-        <span class="ca num">${krShort(c.amt)} <small>${pct < 1 && pct > 0 ? '1% 미만' : Math.round(pct) + '%'}</small></span>
-        <span class="cb"><span style="width:${Math.max(c.amt ? 1.5 : 0, c.amt / max * 100)}%;background:${col}"></span></span>
-      </button></li>`;
-    }).join('')}</ul>
-  </div>`;
-}
 function sourceSelect(i){
   const parts = parseSources(i);
   if (parts.length > 1 || (parts.length === 1 && unassignedOf(i))) return `<button type="button" class="srcbtn" data-edit="${esc(i.id)}">${sourceText(i)}</button>`;
@@ -832,16 +785,11 @@ function sourceSelect(i){
 /* ---------- 지출 ---------- */
 function renderFilters(){
   const g = [['all','전체'],['move','이사'],['baby','육아']];
-  $('#f-group').innerHTML = g.map(([k, l]) => `<button type="button" class="chip" data-g="${k}" aria-pressed="${UI.group === k && !UI.section}">${l}</button>`).join('')
-    + (UI.section ? `<button type="button" class="chip sec-chip" data-sec-clear aria-pressed="true" aria-label="${esc(UI.section)} 분류 필터 해제">${esc(UI.section)} ×</button>` : '');
+  $('#f-group').innerHTML = g.map(([k, l]) => `<button type="button" class="chip" data-g="${k}" aria-pressed="${UI.group === k}">${l}</button>`).join('');
   const st = [['all','모든 상태'], ...Object.entries(STATUS).map(([k, v]) => [k, v.label]), ['nosrc','출처 미정']];
   $('#f-status').innerHTML = st.map(([k, l]) => `<button type="button" class="chip" data-s="${k}" aria-pressed="${UI.status === k}">${l}</button>`).join('');
 }
-$('#f-group').addEventListener('click', e => {
-  if (e.target.closest('[data-sec-clear]')){ UI.section = ''; renderFilters(); renderItems(); return; }
-  const b = e.target.closest('[data-g]');
-  if (b){ UI.group = b.dataset.g; UI.section = ''; renderFilters(); renderItems(); }
-});
+$('#f-group').addEventListener('click', e => { const b = e.target.closest('[data-g]'); if (b){ UI.group = b.dataset.g; renderFilters(); renderItems(); } });
 $('#f-status').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (b){ UI.status = b.dataset.s; renderFilters(); renderItems(); } });
 $('#f-q').addEventListener('input', e => { UI.q = e.target.value.trim(); renderItems(); });
 
@@ -851,7 +799,6 @@ function renderItems(){
   const q = UI.q.toLowerCase();
   const rows = S.items.filter(i =>
     (UI.group === 'all' || i.group === UI.group) &&
-    (!UI.section || (i.section || '기타') === UI.section) &&
     (UI.status === 'all' || (UI.status === 'nosrc' ? unassignedOf(i) > 0 : i.status === UI.status)) &&
     (!q || [i.name, i.note, i.section, i.when].join(' ').toLowerCase().includes(q))
   ).sort(byOrder);
