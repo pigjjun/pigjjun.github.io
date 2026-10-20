@@ -1162,10 +1162,23 @@ function formatMoney(el){
 document.addEventListener('input', e => { if (e.target.matches?.('input.money')) formatMoney(e.target); });
 
 /* ---------- 폰 키보드가 올라오면 아래 탭바·추가 버튼 숨기기 ---------- */
-const isTypingField = el => el && (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' ||
-  (el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit'].includes(el.type)));
-document.addEventListener('focusin', e => { if (isTypingField(e.target)) document.body.classList.add('typing'); });
-document.addEventListener('focusout', () => setTimeout(() => { if (!isTypingField(document.activeElement)) document.body.classList.remove('typing'); }, 50));
+// 글자 칸에 커서가 있고 '실제로 키보드가 화면을 가리고 있을 때만' 숨긴다.
+// (아이폰은 키보드를 내려도 커서가 칸에 남아 있어서, 커서만 보고 숨기면 탭바가 안 돌아왔다)
+const isTypingField = el => el && (el.tagName === 'TEXTAREA' ||
+  (el.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'range', 'color', 'file'].includes(el.type)));
+let fullH = window.innerHeight;
+function updateTyping(){
+  fullH = Math.max(fullH, window.innerHeight);
+  const vv = window.visualViewport;
+  const keyboard = (vv ? window.innerHeight - vv.height > 120 : false) || window.innerHeight < fullH - 120;
+  document.body.classList.toggle('typing', keyboard && isTypingField(document.activeElement));
+}
+document.addEventListener('focusin', () => setTimeout(updateTyping, 300));   // 키보드가 다 올라온 뒤 판단
+document.addEventListener('focusout', () => setTimeout(updateTyping, 50));
+window.visualViewport?.addEventListener('resize', updateTyping);
+window.addEventListener('resize', updateTyping);
+window.addEventListener('orientationchange', () => { fullH = 0; setTimeout(updateTyping, 400); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') updateTyping(); });
 
 /* ---------- 시작 ---------- */
 let hashTab = 'summary';
