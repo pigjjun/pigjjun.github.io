@@ -277,19 +277,92 @@ button.sync{border:0;background:none;padding:4px 0;cursor:pointer}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);
   padding:9px 16px;border-radius:999px;font-size:13px;z-index:20;max-width:calc(100vw - 32px)}
 @media (prefers-reduced-motion:no-preference){.toast{transition:opacity .2s}}
+
+/* ===== 다듬기: 가벼운 움직임(transform·opacity만, 한 번만)과 질감 ===== */
+:root{--shadow:0 1px 2px rgba(23,34,31,.04),0 4px 14px rgba(23,34,31,.05);--ease:cubic-bezier(.2,.8,.2,1)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--shadow:none}}
+:root[data-theme="dark"]{--shadow:none}
+
+header.top h1{display:flex;align-items:center;gap:9px}
+.logo{width:28px;height:28px;flex:none;border-radius:9px}
+.logo.big{width:56px;height:56px;margin:0 auto 4px;border-radius:16px}
+
+.panel,.kpis,.list{box-shadow:var(--shadow)}
+.kpi.loan{background:linear-gradient(0deg,var(--danger-bg),transparent 140%)}
+.kpi .eyebrow{display:block;margin-bottom:2px}
+
+nav.tabs button{display:flex;align-items:center;justify-content:center;gap:6px;transition:background-color .2s,color .2s}
+nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+@media (max-width:640px){
+  nav.tabs{background:color-mix(in srgb,var(--surface) 92%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+  nav.tabs button{flex-direction:column;gap:2px;font-size:11px;padding:7px 4px 6px;border-radius:12px}
+  nav.tabs svg{width:22px;height:22px}
+  nav.tabs button[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+}
+
+/* 누를 때 살짝 눌리는 느낌 */
+.btn,.chip,.qchip,.fab,.counts button,.linkrow,nav.tabs button,.pop button,.x{transition:transform .12s var(--ease),background-color .15s,border-color .15s,color .15s}
+.btn:active,.chip:active,.qchip:active,.fab:active,.counts button:active,.linkrow:active,nav.tabs button:active,.x:active{transform:scale(.96)}
+.item-main{transition:background-color .15s}
+.item-main:active{background:var(--sunk)}
+.fab{box-shadow:0 6px 18px color-mix(in srgb,var(--accent) 35%,transparent)}
+
+.bar span{transition:width .6s var(--ease)}
+.splitbar span{transition:width .6s var(--ease)}
+
+/* 상태 칩: 왼쪽 점으로 색을 한 번 더 */
+.qchip.pill{padding:3px 10px 3px 8px}
+.qchip.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.85}
+.qchip.src.unset::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+
+/* 메뉴 */
+.pop{border-radius:14px;padding:6px}
+.pop button.picked{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pop button.picked b{animation:tick .25s var(--ease)}
+
+/* 체크박스 */
+.todos input[type=checkbox]{transition:transform .15s var(--ease)}
+.todos input[type=checkbox]:checked{animation:tick .25s var(--ease)}
+.todos li .tx{transition:color .2s}
+
+/* 섹션 머리 */
+.sec-h{position:relative;padding-left:12px}
+.sec-h::before{content:"";position:absolute;left:2px;top:4px;bottom:10px;width:3px;border-radius:2px;background:var(--line)}
+.sec-h:has(.g-move)::before{background:var(--move)}
+.sec-h:has(.g-baby)::before{background:var(--baby)}
+
+.toast{box-shadow:0 8px 24px rgba(0,0,0,.2);font-weight:500}
+
+@media (prefers-reduced-motion:no-preference){
+  section.enter{animation:fadeUp .22s var(--ease)}
+  .pop.in{animation:popIn .16s var(--ease)}
+  .toast.in{animation:toastIn .22s var(--ease)}
+  .qchip.flash{animation:chipPop .5s var(--ease)}
+  .item.flashrow{animation:rowGlow .8s ease-out}
+  .lock-box{animation:fadeUp .3s var(--ease)}
+}
+.fab{display:inline-flex;align-items:center;gap:6px}
+.fab svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;flex:none}
+@media (max-width:640px){.fab{width:56px;height:56px;padding:0;justify-content:center}.fab span{display:none}.fab svg{width:26px;height:26px}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes popIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes chipPop{0%{transform:scale(1);box-shadow:0 0 0 0 color-mix(in srgb,currentColor 45%,transparent)}35%{transform:scale(1.1)}100%{transform:scale(1);box-shadow:0 0 0 8px transparent}}
+@keyframes rowGlow{from{background:var(--accent-soft)}to{background:transparent}}
+@keyframes tick{0%{transform:scale(.6)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
 </style>
 
 <div class="wrap">
   <header class="top">
-    <h1>이사·출산 예산장</h1>
+    <h1><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--accent)"/><path d="M16 7 6 15h3v9.5h14V15h3z" fill="var(--accent-ink)"/><path d="M16 21.5s-3.6-2.2-3.6-4.4a1.9 1.9 0 0 1 3.6-.9 1.9 1.9 0 0 1 3.6.9c0 2.2-3.6 4.4-3.6 4.4z" fill="var(--accent)"/></svg><span>이사·출산 예산장</span></h1>
     <button type="button" class="sync" id="sync" aria-label="지금 동기화"><i></i><span>불러오는 중…</span></button>
   </header>
 
   <nav class="tabs" aria-label="화면">
-    <button type="button" data-tab="summary">현황</button>
-    <button type="button" data-tab="items">지출</button>
-    <button type="button" data-tab="funds">자금</button>
-    <button type="button" data-tab="todo">할 일</button>
+    <button type="button" data-tab="summary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>현황</span></button>
+    <button type="button" data-tab="items"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg><span>지출</span></button>
+    <button type="button" data-tab="funds"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="13" rx="2.5"/><path d="M16 12.5h2M2.5 10h19"/></svg><span>자금</span></button>
+    <button type="button" data-tab="todo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l4.5 4.5L20 6"/></svg><span>할 일</span></button>
   </nav>
 
   <main>
@@ -317,7 +390,7 @@ button.sync{border:0;background:none;padding:4px 0;cursor:pointer}
   <p class="ver" id="ver"></p>
 </div>
 
-<button type="button" class="fab" id="fab" hidden>+ 지출 추가</button>
+<button type="button" class="fab" id="fab" aria-label="지출 추가" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>지출 추가</span></button>
 
 <dialog id="dlg">
   <form class="sheet" id="item-form" method="dialog">
@@ -360,6 +433,7 @@ button.sync{border:0;background:none;padding:4px 0;cursor:pointer}
 <div class="pop" id="pop" role="menu" hidden></div>
 <div class="lock" id="lock" hidden>
   <form class="lock-box" id="lock-form">
+    <svg class="logo big" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="var(--accent)"/><path d="M16 7 6 15h3v9.5h14V15h3z" fill="var(--accent-ink)"/><path d="M16 21.5s-3.6-2.2-3.6-4.4a1.9 1.9 0 0 1 3.6-.9 1.9 1.9 0 0 1 3.6.9c0 2.2-3.6 4.4-3.6 4.4z" fill="var(--accent)"/></svg>
     <h2>이사·출산 예산장</h2>
     <p class="hint">두 사람만 아는 PIN을 입력하세요. 이 기기에서는 한 번만 입력하면 돼요.</p>
     <input type="password" id="lock-pin" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" enterkeyhint="go" maxlength="12" aria-label="PIN">
@@ -433,6 +507,7 @@ function sourceText(i){
 
 function toast(msg){
   const t = $('#toast'); t.textContent = msg; t.hidden = false;
+  t.classList.remove('in'); void t.offsetWidth; t.classList.add('in');
   clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2200);
 }
 function setSync(state, text){ const el = $('#sync'); el.className = 'sync ' + state; el.querySelector('span').textContent = text; }
@@ -533,7 +608,11 @@ function showTab(t){
   if (!['summary','items','funds','todo'].includes(t)) t = 'summary';
   UI.tab = t;
   document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-current', b.dataset.tab === t ? 'page' : 'false'));
-  for (const v of ['summary','items','funds','todo']) $('#v-' + v).hidden = v !== t;
+  for (const v of ['summary','items','funds','todo']){
+    const sec = $('#v-' + v), show = v === t;
+    if (show && sec.hidden){ sec.classList.remove('enter'); void sec.offsetWidth; sec.classList.add('enter'); }
+    sec.hidden = !show;
+  }
   $('#fab').hidden = !(t === 'items' || t === 'summary');
   try { history.replaceState(null, '', '#' + t); } catch {}
 }
@@ -719,14 +798,14 @@ function itemRow(i){
   if (i.status === 'gift' && i.gift) meta.push('가액 ' + won(i.gift));
   if (i.note && !/^https?:/.test(i.note)) meta.push(esc(i.note.length > 40 ? i.note.slice(0, 40) + '…' : i.note));
   const stKey = i.status in STATUS ? i.status : 'plan';
-  return `<div class="item" data-id="${esc(i.id)}">
+  return `<div class="item${UI.flash?.id === i.id && Date.now() - UI.flash.at < 700 ? ' flashrow' : ''}" data-id="${esc(i.id)}">
     <button type="button" class="item-main" data-open="${esc(i.id)}">
       <span class="nm">${esc(i.name)}</span>
       <span class="amt num ${i.amount ? '' : 'zero'}">${i.amount ? won(i.amount) : (i.status === 'gift' ? '0원' : '금액 미정')}</span>
       ${meta.length ? `<span class="meta">${meta.join(' · ')}</span>` : ''}
     </button>
     <div class="qrow">
-      <button type="button" class="qchip pill s-${stKey}" data-qs="${esc(i.id)}" aria-haspopup="menu">${pill}<i aria-hidden="true">▾</i></button>
+      <button type="button" class="qchip pill s-${stKey}${flashOf(i.id, 'qs')}" data-qs="${esc(i.id)}" aria-haspopup="menu">${pill}<i aria-hidden="true">▾</i></button>
       ${i.status === 'gift' ? '' : srcChip(i)}
     </div>
   </div>`;
@@ -739,7 +818,7 @@ function srcChip(i){
     label = parts.map(p => esc(fundName(p.fund) || '삭제된 자금') + (parts.length > 1 || rem ? ' ' + kr(p.amount) : '')).join(' + ');
     if (rem){ label += ` · 미정 ${kr(rem)}`; cls = 'unset'; }
   }
-  return `<button type="button" class="qchip src ${cls}" data-qf="${esc(i.id)}" aria-haspopup="menu"><span>← ${label}</span><i aria-hidden="true">▾</i></button>`;
+  return `<button type="button" class="qchip src ${cls}${flashOf(i.id, 'qf')}" data-qf="${esc(i.id)}" aria-haspopup="menu"><span>← ${label}</span><i aria-hidden="true">▾</i></button>`;
 }
 $('#items-list').addEventListener('click', e => {
   if (Date.now() - closedAt < 400) return; // 편집 창을 닫은 그 터치가 목록까지 눌리는 것 방지
@@ -761,8 +840,11 @@ function openPop(anchor, html, onPick){
   const r = anchor.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
   const vw = document.documentElement.clientWidth, vh = window.innerHeight;
   const left = Math.max(8, Math.min(r.left, vw - w - 8));
-  const top = r.bottom + 6 + h > vh - 8 ? Math.max(8, r.top - 6 - h) : r.bottom + 6;
+  const up = r.bottom + 6 + h > vh - 8;
+  const top = up ? Math.max(8, r.top - 6 - h) : r.bottom + 6;
   pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  pop.style.transformOrigin = `${Math.round(r.left + r.width / 2 - left)}px ${up ? '100%' : '0'}`;
+  pop.classList.remove('in'); void pop.offsetWidth; pop.classList.add('in');
   anchor.setAttribute('aria-expanded', 'true');
   closePop.anchor = anchor;
   pop.querySelector('button:not([disabled])')?.focus({preventScroll: true});
@@ -772,11 +854,19 @@ function closePop(){
   pop.hidden = true; popPick = null;
   closePop.anchor?.setAttribute('aria-expanded', 'false');
 }
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 pop.addEventListener('click', e => {
   const b = e.target.closest('button[data-v]');
   if (!b || !popPick) return;
-  const pick = popPick; closePop(); pick(b.dataset.v);
+  const pick = popPick; popPick = null;
+  // 고른 항목에 체크를 보여 주고 잠깐 뒤 닫는다 (무엇을 골랐는지 눈으로 확인)
+  pop.querySelectorAll('button').forEach(x => { x.classList.remove('picked'); x.querySelector('b')?.remove(); });
+  b.classList.add('picked'); b.insertAdjacentHTML('beforeend', '<b>✓</b>');
+  setTimeout(() => { closePop(); pick(b.dataset.v); }, reduceMotion ? 0 : 220);
 });
+// 방금 바뀐 칩을 한 번 반짝이게: 다시 그릴 때 이 표시가 있으면 flash 클래스
+function markFlash(id, kind){ UI.flash = {id, kind, at: Date.now()}; }
+const flashOf = (id, kind) => UI.flash && UI.flash.id === id && UI.flash.kind === kind && Date.now() - UI.flash.at < 700 ? ' flash' : '';
 document.addEventListener('pointerdown', e => { if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('[data-qs],[data-qf]')) closePop(); }, true);
 window.addEventListener('scroll', closePop, {passive: true});
 window.addEventListener('resize', closePop);
@@ -791,6 +881,7 @@ function statusMenu(anchor){
     `<button type="button" role="menuitemradio" aria-checked="${k === cur}" data-v="${k}"><span class="dot s-${k}"></span>${v.label}${k === cur ? '<b>✓</b>' : ''}</button>`).join(''),
     async v => {
       if (v === cur) return;
+      markFlash(i.id, 'qs');
       const data = {status: v};
       if (v === 'card' && !i.billMonth) data.billMonth = '11월';
       if (await write('items', i.id, data, 'update')) toast(`${STATUS[v].label}(으)로 바꿨어요`);
@@ -814,6 +905,7 @@ function sourceMenu(anchor){
     + (parts.length ? '<button type="button" data-v="">출처 미정으로</button>' : ''),
     async v => {
       if (v === '__split') return openEditor(i.id);
+      markFlash(i.id, 'qf');
       const fund = await pickFund(v);
       const source = !fund ? '' : partial ? withRemainder(i, fund) : fund;
       if (await write('items', i.id, {source}, 'update')) toast(fund ? `${fundName(fund) || '대출'}에서 내기로 했어요` : '출처를 비웠어요');
