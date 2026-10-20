@@ -1,2 +1,2 @@
-window.BUDGET_API = "https://script.google.com/macros/s/AKfycbx4nIxNPJJVBLbJ95RTgr64tWYnzqh63Wrn_qjUwW8_FGvGXer-0fngzSHtzN4zuccp/exec";
-window.APP_VERSION = "2026.10.20-1853";
+window.BUDGET_API = "https://script.google.com/macros/s/AKfycbwc-r53xhdvGCqANA7Bfp2yG0pN4AIUBVWD6yrEUA5daLWmR3KyN8nwdDGVjhZY9niU/exec";
+window.APP_VERSION = "2026.10.20-1858";
