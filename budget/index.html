@@ -108,11 +108,22 @@ nav.tabs button[aria-current="page"]{background:var(--accent);color:var(--accent
 
 /* 요약 숫자 */
 .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
-.kpi{background:var(--surface);padding:14px 16px;min-width:0}
-.kpi b{display:block;font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.25;margin-top:2px}
-.kpi span.sub{font-size:12px;color:var(--muted)}
+/* PC: 세 칸 나란히, 칸마다 이름 / 큰 금액 / 정확한 금액이 위에서 아래로.
+   폰: 세 줄, 줄마다 왼쪽 이름 · 오른쪽 금액 두 줄(오른쪽 끝 맞춤) */
+.kpi{background:var(--surface);padding:14px 16px;min-width:0;display:grid;grid-template-rows:auto auto auto;align-content:start;gap:2px}
+.kpi .eyebrow{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+.kpi .eyebrow small{font-weight:400;font-size:11px;letter-spacing:0;margin-left:5px}
+.kpi b{display:block;font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.25;white-space:nowrap}
+.kpi span.sub{font-size:12px;color:var(--muted);line-height:1.4}
 .kpi.loan b{color:var(--danger)}
-@media (max-width:640px){.kpis{grid-template-columns:1fr}.kpi{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}.kpi b{font-size:19px}}
+@media (max-width:640px){
+  .kpis{grid-template-columns:1fr}
+  .kpi{grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:12px;row-gap:1px;align-items:center;padding:12px 16px}
+  .kpi .eyebrow{grid-column:1;grid-row:1 / span 2;align-self:center}
+  .kpi .eyebrow small{display:block;margin-left:0}
+  .kpi b{grid-column:2;grid-row:1;text-align:right;font-size:20px}
+  .kpi span.sub{grid-column:2;grid-row:2;text-align:right}
+}
 .splitbar{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--sunk);margin-top:10px}
 .splitbar span{display:block;height:100%}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
@@ -274,7 +285,6 @@ button.sync{border:0;background:none;padding:4px 0;cursor:pointer}
 .srcbtn{grid-column:1/-1;text-align:left;border:1px dashed var(--line);background:none;border-radius:8px;padding:7px 10px;font-size:13px;color:var(--ink)}
 .warn{color:var(--danger);font-weight:600}
 .edit-table tfoot tr.sub td{font-weight:500;border-top:0;color:var(--muted)}
-.kpi .eyebrow small{font-weight:400}
 .lock{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
 .lock-box{width:min(340px,100%);display:flex;flex-direction:column;gap:12px;text-align:center}
 .lock-box h2{font-size:20px}
@@ -295,8 +305,7 @@ header.top h1{display:flex;align-items:center;gap:9px}
 .logo.big{width:56px;height:56px;margin:0 auto 4px;border-radius:16px}
 
 .panel,.kpis,.list{box-shadow:var(--shadow)}
-.kpi.loan{background:linear-gradient(0deg,var(--danger-bg),transparent 140%)}
-.kpi .eyebrow{display:block;margin-bottom:2px}
+.kpi.loan{background:color-mix(in srgb,var(--danger-bg) 55%,var(--surface))}
 
 nav.tabs button{display:flex;align-items:center;justify-content:center;gap:6px;transition:background-color .2s,color .2s}
 nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
@@ -687,7 +696,7 @@ function renderSummary(){
     <div>
       <div class="kpis">
         <div class="kpi"><span class="eyebrow">총 지출 예정</span><b class="num" title="${won(total)}">${kr(total)}</b><span class="sub num">${won(total)}</span></div>
-        <div class="kpi"><span class="eyebrow">마련된 자금 <small>(대출 빼고)</small></span><b class="num" title="${won(fundTotal)}">${kr(fundTotal)}</b><span class="sub num">${won(fundTotal)}</span></div>
+        <div class="kpi"><span class="eyebrow">마련된 자금<small>대출 빼고</small></span><b class="num" title="${won(fundTotal)}">${kr(fundTotal)}</b><span class="sub num">${won(fundTotal)}</span></div>
         <div class="kpi loan"><span class="eyebrow">${need >= 0 ? '대출 필요' : '여유 자금'}</span><b class="num">${kr(Math.abs(need))}</b><span class="sub num">${!loanTotal ? won(Math.abs(need)) : gap > 0 ? `대출 ${kr(loanTotal)} 잡음 · ${kr(gap)} 더 필요` : `대출 ${kr(loanTotal)} 잡음 · 충분해요`}</span></div>
       </div>
       <div class="splitbar" aria-hidden="true">
