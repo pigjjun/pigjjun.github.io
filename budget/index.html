@@ -50,7 +50,7 @@ if ('serviceWorker' in navigator) addEventListener('load', () => navigator.servi
   --plan:#64748b; --plan-bg:#eef1f5; --card:#a1620b; --card-bg:#fdf0d9;
   --settled:#1f7a43; --settled-bg:#dff3e6; --gift:#7a4fc9; --gift-bg:#eee6fb;
   --danger:#b42318; --danger-bg:#fde8e6;
-  --move:#2f6db3; --baby:#d0628b;
+  --move:#2f6db3; --baby:#d0628b; --gj:#2f6db3; --eh:#e07a2f; --etc:#1d6b58;
   --font:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
   --radius:12px;
 }
@@ -59,13 +59,13 @@ if ('serviceWorker' in navigator) addEventListener('load', () => navigator.servi
   --ink:#e6eeeb; --muted:#97a6a1; --accent:#5cc4a6; --accent-ink:#0b1a15; --accent-soft:#1d3a31;
   --plan:#a3b1c2; --plan-bg:#232b33; --card:#f0b45a; --card-bg:#3a2c14;
   --settled:#6cd598; --settled-bg:#163225; --gift:#b99bf2; --gift-bg:#2a2140;
-  --danger:#f2867b; --danger-bg:#3d1c19; --move:#78aee8; --baby:#ee93b4; color-scheme:dark}}
+  --danger:#f2867b; --danger-bg:#3d1c19; --move:#78aee8; --baby:#ee93b4; --gj:#78aee8; --eh:#f2a35e; --etc:#5cc4a6; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f1513; --surface:#18201d; --sunk:#121a17; --line:#2a3531;
   --ink:#e6eeeb; --muted:#97a6a1; --accent:#5cc4a6; --accent-ink:#0b1a15; --accent-soft:#1d3a31;
   --plan:#a3b1c2; --plan-bg:#232b33; --card:#f0b45a; --card-bg:#3a2c14;
   --settled:#6cd598; --settled-bg:#163225; --gift:#b99bf2; --gift-bg:#2a2140;
-  --danger:#f2867b; --danger-bg:#3d1c19; --move:#78aee8; --baby:#ee93b4; color-scheme:dark}
+  --danger:#f2867b; --danger-bg:#3d1c19; --move:#78aee8; --baby:#ee93b4; --gj:#78aee8; --eh:#f2a35e; --etc:#5cc4a6; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;
@@ -136,8 +136,6 @@ nav.tabs button[aria-current="page"]{background:var(--accent);color:var(--accent
 .bill-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:9px 0;border-top:1px solid var(--line);align-items:center}
 .bill-list .nm{min-width:0;overflow-wrap:anywhere}
 .bill-list .amt{text-align:right;font-weight:600}
-.bill-list select{grid-column:1/-1;width:100%}
-@media (min-width:641px){.bill-list li{grid-template-columns:minmax(0,1fr) 160px 110px}.bill-list select{grid-column:auto;order:2}.bill-list .amt{order:3}}
 
 select,input[type=text],input[type=search],textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:0}
 select.unset{border-color:var(--danger);color:var(--danger)}
@@ -378,6 +376,40 @@ nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2
 .exitbar span{font-size:12px;opacity:.75}
 .exitbar .btn{flex:none;background:var(--bg);color:var(--ink);border-color:var(--bg)}
 @media (prefers-reduced-motion:no-preference){.exitbar.in{animation:toastIn .22s var(--ease)}}
+.c-gj{--c:var(--gj)} .c-eh{--c:var(--eh)} .c-etc{--c:var(--etc)} .c-none{--c:var(--muted)}
+.bar.stacked{display:flex}
+.bar.stacked span{border-radius:0;flex:none}
+.bar.stacked span:first-child{border-radius:99px 0 0 99px}
+.bar.stacked span:last-child{border-radius:0 99px 99px 0}
+.bar.stacked span:only-child{border-radius:99px}
+.bar .seg-gj{background:var(--gj)} .bar .seg-eh{background:var(--eh)} .bar .seg-etc{background:var(--etc)}
+.bar.stacked.over{box-shadow:0 0 0 2px var(--danger-bg),inset 0 0 0 1px var(--danger)}
+.cardlegend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.cardlegend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.cdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--c);margin-right:4px;vertical-align:1px}
+.cardsplit{margin-top:1px}
+.deposits{display:flex;flex-direction:column;gap:8px;margin:10px 0 4px}
+.dep{border:1px solid var(--line);border-left:4px solid var(--c,var(--muted));border-radius:10px;padding:9px 12px;display:flex;flex-direction:column;gap:3px}
+.dep.unset{border-left-color:var(--danger);background:var(--danger-bg)}
+.dep:has(.c-gj){--c:var(--gj)} .dep:has(.c-eh){--c:var(--eh)}
+.dep-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.dep-top b{font-size:17px}
+.cardtag{font-weight:700;font-size:14px;color:var(--c)}
+.dep.unset .cardtag{color:var(--danger)}
+.dep-src{font-size:12px;color:var(--muted)}
+.bill-list .sels{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1fr);gap:6px}
+.bill-list .sels > *{width:100%;min-width:0}
+.bill-list select.c-sel-gj{color:var(--gj);font-weight:600} .bill-list select.c-sel-eh{color:var(--eh);font-weight:600}
+.qchip.cardchip{border-radius:999px;padding:2px 10px;font-weight:600;background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--c)}
+.qchip.cardchip.c-none{background:var(--danger-bg);color:var(--danger)}
+.dot.c-gj{color:var(--gj)} .dot.c-eh{color:var(--eh)}
+.seg.seg3{grid-template-columns:repeat(3,1fr)}
+.suggest{border-color:color-mix(in srgb,var(--accent) 40%,var(--line));background:color-mix(in srgb,var(--accent-soft) 45%,var(--surface));margin-bottom:12px}
+.suggest p{margin:6px 0 4px}
+.suggest summary{cursor:pointer;font-size:13px;color:var(--accent);font-weight:600;padding:4px 0}
+.sugg-list{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.sugg-list li{display:flex;flex-direction:column}
+.sugg-list span{color:var(--muted)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes popIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
@@ -402,6 +434,7 @@ nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2
   <main>
     <section id="v-summary" class="stack"></section>
     <section id="v-items" hidden>
+      <div id="suggest"></div>
       <div class="filters">
         <div class="chips" id="f-group" role="group" aria-label="구분"></div>
         <div class="chips" id="f-status" role="group" aria-label="상태"></div>
@@ -445,6 +478,14 @@ nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2
         <label><input type="radio" name="st" value="settled">정산 완료</label>
         <label><input type="radio" name="st" value="gift">선물</label>
       </div>
+    </div>
+    <div class="field" id="e-card-wrap"><span>결제 카드 <em class="hint">카드값이 빠지는 통장</em></span>
+      <div class="seg seg3" id="e-card">
+        <label><input type="radio" name="cb" value="">지정 안 함</label>
+        <label><input type="radio" name="cb" value="gj">광준 카드</label>
+        <label><input type="radio" name="cb" value="eh">은혜 카드</label>
+      </div>
+      <small class="hint warn" id="e-card-warn" hidden>구글 시트 쪽 코드(Code.gs)를 업데이트해야 저장돼요.</small>
     </div>
     <div class="two">
       <div class="field srcfield"><span>어디서 나갈 돈? <em class="hint">나눠 낼 수 있어요</em></span>
@@ -546,6 +587,14 @@ function parseSources(i){
   free.forEach(p => { p.amount = Math.max(0, (i.amount || 0) - fixed) / free.length; p.rest = true; });
   return parts;
 }
+// 결제 카드 명의. 카드값은 각자 카드 통장으로 빠지니, 통장마다 얼마 넣을지 계산할 때 쓴다
+const CARDS = {gj: '광준', eh: '은혜'};
+const cardName = k => CARDS[k] ? CARDS[k] + ' 카드' : '';
+const CARD_PREF = 'budget-card'; // 이 기기에서 마지막으로 고른 카드 (아내 폰이면 아내 카드가 기본)
+const lastCard = () => { try { return localStorage.getItem(CARD_PREF) || ''; } catch { return ''; } };
+const rememberCard = k => { try { if (k) localStorage.setItem(CARD_PREF, k); } catch {} };
+// 구글 시트 쪽 코드가 '결제카드' 열을 아직 모르면(업데이트 전) 저장이 안 되므로 안내한다
+const cardSupported = () => !API || !S.items.length || 'cardBy' in S.items[0];
 const unassignedOf = i => i.status === 'gift' ? 0 : Math.max(0, (i.amount || 0) - sum(parseSources(i)));
 // 남은 금액을 이 자금에서 내도록 추가 (기존에 정한 몫은 그대로)
 function withRemainder(i, fund){
@@ -737,22 +786,33 @@ function renderSummary(){
   const months = [...new Set(card.map(i => i.billMonth || '출금월 미정'))].sort((a, b) => billRank(a) - billRank(b));
   const billBlocks = months.map(m => {
     const rows = card.filter(i => (i.billMonth || '출금월 미정') === m);
-    const bySrc = {};
+    // 카드(통장)별로: 그 통장에 넣어야 할 돈과, 그 돈을 어느 자금에서 가져올지
+    const byCard = {};
     rows.forEach(i => {
-      parseSources(i).forEach(p => { bySrc[p.fund] = (bySrc[p.fund] || 0) + p.amount; });
-      const r = unassignedOf(i); if (r) bySrc[''] = (bySrc[''] || 0) + r;
+      const k = CARDS[i.cardBy] ? i.cardBy : '';
+      const d = byCard[k] || (byCard[k] = {total: 0, src: {}});
+      d.total += i.amount || 0;
+      parseSources(i).forEach(p => { d.src[p.fund] = (d.src[p.fund] || 0) + p.amount; });
+      const r = unassignedOf(i); if (r) d.src[''] = (d.src[''] || 0) + r;
     });
-    const srcChips = Object.entries(bySrc).sort((a, b) => (a[0] === '') - (b[0] === '') || b[1] - a[1])
-      .map(([k, v]) => `<span class="${k ? '' : 'unset'}">${esc(k ? fundName(k) || '삭제된 자금' : '출처 미정')} ${won(v)}</span>`).join('');
+    const deposit = ['gj', 'eh', ''].filter(k => byCard[k]).map(k => {
+      const d = byCard[k];
+      const src = Object.entries(d.src).sort((a, b) => (a[0] === '') - (b[0] === '') || b[1] - a[1])
+        .map(([f, v]) => f ? `${esc(fundName(f) || '삭제된 자금')}에서 ${won(v)}` : `<span class="warn">출처 미정 ${won(v)}</span>`).join(' · ');
+      return `<div class="dep${k ? '' : ' unset'}">
+        <div class="dep-top"><span class="cardtag c-${k || 'none'}">${k ? cardName(k) + ' 통장' : '카드 미지정'}</span><b class="num">${won(d.total)}</b></div>
+        <div class="dep-src">${src}</div>
+      </div>`;
+    }).join('');
     return `<div class="panel" id="j-bill-${months.indexOf(m)}">
       <h2>${esc(m)} 카드 출금 예정 <small>${rows.length}건</small></h2>
       <div class="bill-total num">${won(sum(rows))}</div>
-      <div class="hint">카드로 이미 결제한 금액이에요. 어디서 메꿀지 골라 두세요.</div>
-      <div class="srcsum">${srcChips}</div>
+      <div class="hint">카드로 이미 결제한 금액이에요. 통장마다 이만큼 넣어 두면 돼요.</div>
+      <div class="deposits">${deposit}</div>
       <ul class="bill-list">${rows.map(i => `
         <li><span class="nm">${esc(i.name)}</span>
-          ${sourceSelect(i)}
-          <span class="amt num">${won(i.amount)}</span></li>`).join('')}</ul>
+          <span class="amt num">${won(i.amount)}</span>
+          <span class="sels">${cardSelect(i)}${sourceSelect(i)}</span></li>`).join('')}</ul>
       <div class="row-actions">
         <button type="button" class="btn" data-settle="${esc(m)}">출금 끝남 → 모두 정산 완료로</button>
       </div>
@@ -760,15 +820,25 @@ function renderSummary(){
   }).join('');
 
   // 자금별 계획
+  let anyCard = false;
   const fundRows = [...S.funds].sort(byOrder).map(f => {
-    const used = items.filter(i => i.status !== 'gift').reduce((a, i) => a + sum(parseSources(i).filter(p => p.fund === f.id)), 0);
-    const pct = f.amount ? Math.min(100, used / f.amount * 100) : (used ? 100 : 0);
+    const by = {gj: 0, eh: 0, etc: 0};
+    items.filter(i => i.status !== 'gift').forEach(i => {
+      const amt = sum(parseSources(i).filter(p => p.fund === f.id));
+      if (amt) by[CARDS[i.cardBy] ? i.cardBy : 'etc'] += amt;
+    });
+    const used = by.gj + by.eh + by.etc;
+    const den = f.amount ? Math.max(f.amount, used) : (used || 1);
     const left = (f.amount || 0) - used;
     const loanNoAmt = isLoan(f) && !f.amount;
+    const seg = k => by[k] ? `<span class="seg-${k}" style="width:${by[k] / den * 100}%"></span>` : '';
+    const cardTxt = ['gj', 'eh'].filter(k => by[k]).map(k => `<span class="cdot c-${k}"></span>${cardName(k)} ${won(by[k])}`).join(' · ');
+    if (by.gj || by.eh) anyCard = true;
     return `<li class="${f.excluded ? 'excl' : ''}${isLoan(f) ? ' loanf' : ''}">
       <div class="top"><b>${esc(f.name)}${f.excluded ? ' · 예산 제외' : ''}${isLoan(f) && !/대출/.test(f.name) ? ' · 대출' : ''}</b><span class="num">${loanNoAmt ? '금액 미정' : won(f.amount)}</span></div>
-      <div class="bar"><span class="${left < 0 && !loanNoAmt ? 'over' : ''}" style="width:${pct}%"></span></div>
+      <div class="bar stacked${left < 0 && !loanNoAmt ? ' over' : ''}">${seg('gj')}${seg('eh')}${seg('etc')}</div>
       <div class="meta num">쓸 곳 정함 ${won(used)} · ${loanNoAmt ? '대출 받을 금액을 자금 탭에서 입력하세요' : left < 0 ? '<b style="color:var(--danger)">' + won(-left) + ' 부족</b>' : '남음 ' + won(left)}</div>
+      ${cardTxt ? `<div class="meta num cardsplit">${cardTxt}</div>` : ''}
     </li>`;
   }).join('');
   const unassigned = items.filter(i => unassignedOf(i) > 0);
@@ -794,6 +864,7 @@ function renderSummary(){
       <div class="stack">
         <div class="panel" id="j-funds">
           <h2>자금별 사용 계획 <small>지출에 출처를 정하면 여기서 빠져요</small></h2>
+          ${anyCard ? `<div class="cardlegend"><span><i class="c-gj"></i>${cardName('gj')}</span><span><i class="c-eh"></i>${cardName('eh')}</span><span><i class="c-etc"></i>그 외</span></div>` : ''}
           <ul class="funds">${fundRows}</ul>
           ${unassigned.length ? `<button type="button" class="linkrow" data-goto="nosrc">출처 아직 안 정한 지출 <b class="num">${unassigned.length}건 · ${won(unassignedSum)}</b><i aria-hidden="true">›</i></button>` : '<div class="hint" style="margin-top:12px">모든 지출의 출처를 정했어요.</div>'}
         </div>
@@ -825,6 +896,7 @@ function renderSummary(){
     if (await write('items', s.dataset.src, {source: v}, 'update')) toast('출처를 바꿨어요');
   }));
   el.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openEditor(b.dataset.edit)));
+  el.querySelectorAll('select[data-cardsel]').forEach(s => s.addEventListener('change', () => setCard(s.dataset.cardsel, s.value)));
   el.querySelectorAll('[data-settle]').forEach(b => b.addEventListener('click', async () => {
     if (!b.classList.contains('armed')){
       b.classList.add('armed', 'btn', 'danger'); b.textContent = '한 번 더 누르면 정산 완료로 바꿔요';
@@ -837,6 +909,10 @@ function renderSummary(){
     if (await writeMany('items', rows.map(i => ({id: i.id, data: {status: 'settled'}})))) toast(`${rows.length}건을 정산 완료로 바꿨어요`);
   }));
 }
+function cardSelect(i){
+  const k = CARDS[i.cardBy] ? i.cardBy : '';
+  return `<select data-cardsel="${esc(i.id)}" class="${k ? 'c-sel-' + k : 'unset'}" aria-label="${esc(i.name)} 결제 카드"><option value="">카드 미지정</option>${Object.keys(CARDS).map(c => `<option value="${c}"${c === k ? ' selected' : ''}>${cardName(c)}</option>`).join('')}</select>`;
+}
 function fundOptions(selected){
   const opts = [...S.funds].sort(byOrder).map(f => `<option value="${esc(f.id)}"${f.id === selected ? ' selected' : ''}>${esc(f.name)}</option>`).join('');
   return opts + (S.funds.some(isLoan) ? '' : '<option value="__newloan">대출 (새로 추가)</option>');
@@ -844,7 +920,7 @@ function fundOptions(selected){
 // 대출 자금이 없으면 '대출'을 만들고 그 id를 돌려준다
 async function pickFund(v){
   if (v !== '__newloan') return v;
-  if (!S.funds.some(f => f.id === 'loan')) await write('funds', 'loan', {name: '대출', amount: 0, excluded: false, order: 99});
+  if (!S.funds.some(f => f.id === 'loan')) write('funds', 'loan', {name: '대출', amount: 0, excluded: false, order: 99}); // 화면엔 바로 생김
   return 'loan';
 }
 // 출처 한 곳(또는 미정)이면 고르는 칸, 여러 곳이면 눌러서 편집
@@ -901,7 +977,7 @@ function itemRow(i){
   if (i.status === 'gift' && i.gift) meta.push('가액 ' + won(i.gift));
   if (i.note && !/^https?:/.test(i.note)) meta.push(esc(i.note.length > 40 ? i.note.slice(0, 40) + '…' : i.note));
   const stKey = i.status in STATUS ? i.status : 'plan';
-  return `<div class="item${UI.flash?.id === i.id && Date.now() - UI.flash.at < 700 ? ' flashrow' : ''}" data-id="${esc(i.id)}">
+  return `<div class="item${UI.flash?.id === i.id && Date.now() - UI.flash.at < 900 ? ' flashrow' : ''}" data-id="${esc(i.id)}">
     <button type="button" class="item-main" data-open="${esc(i.id)}">
       <span class="nm">${esc(i.name)}</span>
       <span class="amt num ${i.amount ? '' : 'zero'}">${i.amount ? won(i.amount) : (i.status === 'gift' ? '0원' : '금액 미정')}</span>
@@ -910,6 +986,7 @@ function itemRow(i){
     <div class="qrow">
       <button type="button" class="qchip pill s-${stKey}${flashOf(i.id, 'qs')}" data-qs="${esc(i.id)}" aria-haspopup="menu">${pill}<i aria-hidden="true">▾</i></button>
       ${i.status === 'gift' ? '' : srcChip(i)}
+      ${i.status === 'card' || CARDS[i.cardBy] ? `<button type="button" class="qchip cardchip c-${CARDS[i.cardBy] ? i.cardBy : 'none'}${flashOf(i.id, 'qc')}" data-qc="${esc(i.id)}" aria-haspopup="menu">${CARDS[i.cardBy] ? cardName(i.cardBy) : '카드 미지정'}<i aria-hidden="true">▾</i></button>` : ''}
     </div>
   </div>`;
 }
@@ -931,6 +1008,8 @@ $('#items-list').addEventListener('click', e => {
   if (qs) return statusMenu(qs);
   const qf = e.target.closest('[data-qf]');
   if (qf) return sourceMenu(qf);
+  const qc = e.target.closest('[data-qc]');
+  if (qc) return cardMenu(qc);
 });
 
 /* ---------- 목록에서 바로 고르는 작은 메뉴 ---------- */
@@ -970,7 +1049,7 @@ pop.addEventListener('click', e => {
 // 방금 바뀐 칩을 한 번 반짝이게: 다시 그릴 때 이 표시가 있으면 flash 클래스
 function markFlash(id, kind){ UI.flash = {id, kind, at: Date.now()}; }
 const flashOf = (id, kind) => UI.flash && UI.flash.id === id && UI.flash.kind === kind && Date.now() - UI.flash.at < 700 ? ' flash' : '';
-document.addEventListener('pointerdown', e => { if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('[data-qs],[data-qf]')) closePop(); }, true);
+document.addEventListener('pointerdown', e => { if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('[data-qs],[data-qf],[data-qc]')) closePop(); }, true);
 window.addEventListener('scroll', closePop, {passive: true});
 window.addEventListener('resize', closePop);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closePop(); });
@@ -994,9 +1073,24 @@ function statusMenu(anchor){
       markFlash(i.id, 'qs');
       const [st, month] = v.split(':');
       const data = {status: st};
-      if (st === 'card') data.billMonth = month;
+      if (st === 'card'){ data.billMonth = month; if (!CARDS[i.cardBy] && lastCard() && cardSupported()) data.cardBy = lastCard(); }
       if (await write('items', i.id, data, 'update')) toast(st === 'card' ? `카드결제 · ${month} 출금으로 바꿨어요` : `${STATUS[st].label}(으)로 바꿨어요`);
     });
+}
+async function setCard(id, k){
+  if (!cardSupported()){ toast('카드 구분은 구글 시트 쪽 코드(Code.gs)를 업데이트한 뒤 저장돼요'); renderAll(); return; }
+  rememberCard(k);
+  if (await write('items', id, {cardBy: k}, 'update')) toast(k ? `${cardName(k)}로 정했어요` : '카드를 비웠어요');
+}
+function cardMenu(anchor){
+  if (closePop.anchor === anchor && !pop.hidden) return closePop();
+  const i = S.items.find(x => x.id === anchor.dataset.qc);
+  if (!i) return;
+  const cur = CARDS[i.cardBy] ? i.cardBy : '';
+  openPop(anchor, `<div class="pop-h">${esc(i.name)} · 어느 카드로 결제?</div>`
+    + Object.keys(CARDS).map(k => `<button type="button" role="menuitemradio" aria-checked="${k === cur}" data-v="${k}"><span class="dot c-${k}"></span>${cardName(k)}${k === cur ? '<b>✓</b>' : ''}</button>`).join('')
+    + `<hr><button type="button" data-v="">지정 안 함${!cur ? '<b>✓</b>' : ''}</button>`,
+    v => { if (v === cur) return; markFlash(i.id, 'qc'); setCard(i.id, v); });
 }
 function sourceMenu(anchor){
   if (closePop.anchor === anchor && !pop.hidden) return closePop();
@@ -1032,6 +1126,11 @@ function fillDatalists(){
 function syncStatusFields(){
   const st = dlg.querySelector('input[name=st]:checked')?.value;
   $('#e-bill-wrap').hidden = st !== 'card';
+  $('#e-card-wrap').hidden = st === 'gift';
+  // 카드결제로 바꿨는데 카드가 비어 있으면 이 기기에서 마지막으로 쓴 카드를 미리 골라 둔다
+  if (st === 'card' && !dlg.querySelector('input[name=cb]:checked')?.value && lastCard()){
+    const r = dlg.querySelector(`input[name=cb][value="${lastCard()}"]`); if (r) r.checked = true;
+  }
   $('#e-gift-wrap').hidden = st !== 'gift';
 }
 dlg.querySelectorAll('input[name=st]').forEach(r => r.addEventListener('change', () => {
@@ -1059,6 +1158,8 @@ function openEditor(id){
   const rest = parts.find(p => p.rest);
   const rows = [{fund: rest ? rest.fund : ''}, ...parts.filter(p => !p.rest).map(p => ({fund: p.fund, amount: p.amount}))];
   renderSrcRows(rows);
+  dlg.querySelector(`input[name=cb][value="${CARDS[i?.cardBy] ? i.cardBy : ''}"]`).checked = true;
+  $('#e-card-warn').hidden = cardSupported();
   (dlg.querySelector(`input[name=st][value="${i?.status || 'plan'}"]`) || dlg.querySelector('input[name=st][value=plan]')).checked = true;
   syncStatusFields();
   const del = $('#e-del'); del.hidden = !i; del.classList.remove('armed'); del.textContent = '삭제';
@@ -1123,18 +1224,25 @@ $('#item-form').addEventListener('submit', async e => {
     source: await readSrcRows(), billMonth: status === 'card' ? ($('#e-bill').value || defaultBill()) : (prev?.billMonth || ''),
     gift: toNum($('#e-gift').value), note: $('#e-note').value.trim(),
     order: prev?.order ?? Date.now(),
+    cardBy: status === 'gift' ? '' : (dlg.querySelector('input[name=cb]:checked')?.value || ''),
   };
+  if (data.cardBy) rememberCard(data.cardBy);
   const srcRows = srcRowsNow();
   if (srcRows.slice(1).reduce((a, r) => a + (r.fund ? r.amount : 0), 0) > data.amount){ toast('나눈 금액 합이 지출 금액보다 커요'); return; }
-  $('#e-save').disabled = true;
-  const ok = await write('items', UI.editing || newId('i'), data);
-  $('#e-save').disabled = false;
-  if (ok){ dlg.close(); toast(prev ? '저장했어요' : '추가했어요'); }
+  // 서버 응답(구글 2~4초)을 기다리지 않는다: write가 화면에 먼저 반영하므로 바로 닫고,
+  // 실패하면 write 쪽에서 알려 주고 서버 상태로 되돌린다
+  const id = UI.editing || newId('i');
+  markFlash(id, 'row');
+  dlg.close();
+  toast(prev ? '저장했어요' : '추가했어요');
+  write('items', id, data);
 });
 $('#e-del').addEventListener('click', async e => {
   const b = e.currentTarget;
   if (!b.classList.contains('armed')){ b.classList.add('armed'); b.textContent = '정말 삭제'; return; }
-  if (await write('items', UI.editing, null, 'delete')){ dlg.close(); toast('삭제했어요'); }
+  const id = UI.editing;
+  dlg.close(); toast('삭제했어요');
+  write('items', id, null, 'delete');
 });
 
 function renderSrcRows(rows){
@@ -1262,7 +1370,50 @@ $('#todo-form').addEventListener('submit', async e => {
   if (!await write('todos', newId('t'), {text, done: false, order: Date.now()})) inp.value = text;
 });
 
-function renderAll(){ renderSummary(); renderFilters(); renderItems(); renderFunds(); renderTodo(); requestAnimationFrame(updateJumpActive); }
+/* ---------- 육아 분류 나누기 제안 ----------
+   '육아용품' 한 분류에 몰려 있는 항목을 이름으로 알아보고 세부 분류로 나누자고 제안한다.
+   누르기 전에는 아무것도 바꾸지 않는다. */
+const BABY_CATS = {
+  '외출·이동': ['휴대용 유모차', '레카로 카시트', '아기띠'],
+  '수유': ['보르르 분유포트', '폴레드 소독기', '젖병', '나리몽 휴대용 분유포트', '젖병 거치대', '마더케이 젖병솔', '수유등'],
+  '목욕·위생': ['자이티 아기비데', '멸균티슈, 치약, 칫솔', '오버나이트', '로션', '스탠딩 욕조..?', '슬로운 샤워기', '손톱트리머', '버틀러 아기물티슈', '비판텐', '프랭클린 힙세정제(리필포함)', '프랭클린 바디&핸드워시', '해피달링 수전, 필터'],
+  '세탁·세제': ['마더케이 세탁세제', '마더케이 지퍼백', '마더케이 무형광 세탁망', '프랭클린 주방세제', '프랭클린 섬유유연제'],
+  '건강·안전': ['아기 비타민D, 유산균', '노시부', '해열제', '브라운 체온계', '온습도계', '가습기', '홈캠', '백색 소음기'],
+  '수면·침구': ['원목침대', '라라스 옆잠베개', '두상베개', '담요', '수면조끼', '엔젤앤비 역방쿠', 'pvc매트', '기저귀갈이대'],
+  '의류·놀이': ['배냇저고리', '베베룬 손수건(거즈, 엠보)', '애착인형', '타이니 모빌'],
+  '산모용품': ['산후복대(마문느,리맘드)', '무압박 양말', '손목보호대', '맘스안심팬티', '생리대 대형', '압박스타킹', '수유패드'],
+  '생활가전': ['음식물처리기', '트롤리'],
+};
+const normName = n => String(n || '').replace(/\s+/g, '');
+const BABY_CAT_OF = Object.fromEntries(Object.entries(BABY_CATS).flatMap(([c, ns]) => ns.map(n => [normName(n), c])));
+const SUGGEST_KEY = 'budget-babycat-dismiss';
+function babyCatPlan(){
+  return S.items.filter(i => i.group === 'baby' && i.section === '육아용품' && BABY_CAT_OF[normName(i.name)])
+    .map(i => ({id: i.id, name: i.name, cat: BABY_CAT_OF[normName(i.name)]}));
+}
+function renderSuggest(){
+  const el = $('#suggest');
+  const plan = loaded.has('items') ? babyCatPlan() : [];
+  if (plan.length < 3 || store.get(SUGGEST_KEY)){ el.innerHTML = ''; return; }
+  const groups = {};
+  plan.forEach(p => (groups[p.cat] = groups[p.cat] || []).push(p.name));
+  const cats = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
+  el.innerHTML = `<div class="panel suggest">
+    <h2>육아용품 ${plan.length}건을 ${cats.length}개 분류로 나눌까요?</h2>
+    <p class="hint">이름을 보고 나눠 봤어요. 나눈 뒤에도 항목마다 분류를 고칠 수 있어요.</p>
+    <details><summary>${cats.map(([c, ns]) => `${esc(c)} ${ns.length}`).join(' · ')}</summary>
+      <ul class="sugg-list">${cats.map(([c, ns]) => `<li><b>${esc(c)}</b><span>${ns.map(esc).join(', ')}</span></li>`).join('')}</ul>
+    </details>
+    <div class="row-actions"><button type="button" class="btn primary" id="sugg-apply">이대로 나누기</button><button type="button" class="btn" id="sugg-no">괜찮아요</button></div>
+  </div>`;
+  $('#sugg-apply').addEventListener('click', async () => {
+    const p = babyCatPlan();
+    if (await writeMany('items', p.map(x => ({id: x.id, data: {section: x.cat}})))) toast(`${p.length}건을 나눴어요`);
+  });
+  $('#sugg-no').addEventListener('click', () => { store.set(SUGGEST_KEY, '1'); renderSuggest(); });
+}
+
+function renderAll(){ renderSuggest(); renderSummary(); renderFilters(); renderItems(); renderFunds(); renderTodo(); requestAnimationFrame(updateJumpActive); }
 
 /* ---------- 금액 입력칸 ---------- */
 // 숫자 키패드, 입력하는 동안 쉼표, 아래에 "1억 2,000만원" 식으로 읽어 준다
