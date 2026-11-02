@@ -437,6 +437,7 @@ nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2
 .todo-edit li.editing{display:block;padding:10px 0}
 .todo-form{display:flex;flex-direction:column;gap:8px}
 .todo-form .te-text{width:100%}
+.field select.combo + input{margin-top:6px}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes popIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
@@ -500,11 +501,11 @@ nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2
     <label class="field"><span>품목</span><input type="text" id="e-name" required></label>
     <div class="two">
       <label class="field"><span>구분</span><select id="e-group"><option value="move">이사</option><option value="baby">육아</option></select></label>
-      <label class="field"><span>분류</span><input type="text" id="e-section" list="dl-section" placeholder="새로 적으면 새 분류" autocomplete="off"></label>
+      <label class="field"><span>분류</span><select id="e-section-sel" class="combo"></select><input type="text" id="e-section" placeholder="새 분류 이름" autocomplete="off" hidden></label>
     </div>
     <div class="two">
       <label class="field"><span>금액 (원)</span><input type="text" id="e-amount" class="money" data-read="e-amount-read" inputmode="numeric" pattern="[0-9,]*" autocomplete="off"><small class="read" id="e-amount-read"></small></label>
-      <label class="field"><span>구매 시기</span><input type="text" id="e-when" list="dl-when"></label>
+      <label class="field"><span>구매 시기</span><select id="e-when-sel" class="combo"></select><input type="text" id="e-when" placeholder="예: 출산 전 11월" autocomplete="off" hidden></label>
     </div>
     <div class="field"><span>상태</span>
       <div class="seg" id="e-status">
@@ -537,8 +538,6 @@ nav.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2
     </div>
   </form>
 </dialog>
-<datalist id="dl-section"></datalist>
-<datalist id="dl-when"></datalist>
 <div class="toast" id="toast" hidden></div>
 <div class="pop" id="pop" role="menu" hidden></div>
 <div class="exitbar" id="exitbar" role="alertdialog" aria-labelledby="exit-t" hidden>
@@ -1168,10 +1167,37 @@ function sourceMenu(anchor){
 
 /* ---------- 편집 시트 ---------- */
 const dlg = $('#dlg');
-function fillDatalists(){
-  $('#dl-section').innerHTML = [...new Set(S.items.map(i => i.section).filter(Boolean))].map(v => `<option value="${esc(v)}">`).join('');
-  $('#dl-when').innerHTML = [...new Set(S.items.map(i => i.when).filter(Boolean))].map(v => `<option value="${esc(v)}">`).join('');
+/* 분류·구매 시기: 휴대폰 기본 고르기 창(아이폰 휠, 안드로이드 목록)으로 고르고,
+   맨 아래 '직접 입력…'을 고르면 입력칸이 열린다. (datalist는 아이폰에서 목록이 안 떠서 바꿈) */
+const COMBO_NEW = '__new';
+function setCombo(sel, inp, values, current, emptyLabel){
+  const list = [...new Set(values.filter(Boolean))];
+  if (current && !list.includes(current)) list.unshift(current);
+  sel.innerHTML = `<option value="">${emptyLabel}</option>`
+    + list.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('')
+    + `<option value="${COMBO_NEW}">직접 입력…</option>`;
+  sel.value = current || '';
+  inp.value = ''; inp.hidden = true;
 }
+const comboValue = (sel, inp) => sel.value === COMBO_NEW ? inp.value.trim() : sel.value;
+function bindCombo(sel, inp){
+  sel.addEventListener('change', () => {
+    const isNew = sel.value === COMBO_NEW;
+    inp.hidden = !isNew;
+    if (isNew) setTimeout(() => inp.focus(), 50);
+  });
+}
+bindCombo($('#e-section-sel'), $('#e-section'));
+bindCombo($('#e-when-sel'), $('#e-when'));
+// 분류는 고른 구분(이사/육아)의 분류만 보여 준다
+const sectionsOf = g => S.items.filter(i => i.group === g).sort(byOrder).map(i => i.section);
+function fillSectionCombo(current){
+  setCombo($('#e-section-sel'), $('#e-section'), sectionsOf($('#e-group').value), current, '분류 없음');
+}
+$('#e-group').addEventListener('change', () => {
+  const cur = comboValue($('#e-section-sel'), $('#e-section'));
+  fillSectionCombo(sectionsOf($('#e-group').value).includes(cur) ? cur : '');
+});
 function syncStatusFields(){
   const st = dlg.querySelector('input[name=st]:checked')?.value;
   $('#e-bill-wrap').hidden = st !== 'card';
@@ -1192,9 +1218,9 @@ function openEditor(id){
   $('#dlg-title').textContent = i ? '지출 편집' : '지출 추가';
   $('#e-name').value = i?.name || '';
   $('#e-group').value = i?.group || (UI.group === 'baby' ? 'baby' : UI.group === 'move' ? 'move' : 'baby');
-  $('#e-section').value = i?.section || '';
+  fillSectionCombo(i?.section || '');
   $('#e-amount').value = i?.amount || '';
-  $('#e-when').value = i?.when || '';
+  setCombo($('#e-when-sel'), $('#e-when'), [...S.items].sort(byOrder).map(x => x.when), i?.when || '', '정하지 않음');
   const bm = billMonths(), curBill = i?.billMonth || '';
   $('#e-bill').innerHTML = (curBill && !bm.includes(curBill) ? [curBill, ...bm] : bm)
     .map(m => `<option value="${esc(m)}">${esc(m)} 출금</option>`).join('');
@@ -1212,7 +1238,6 @@ function openEditor(id){
   (dlg.querySelector(`input[name=st][value="${i?.status || 'plan'}"]`) || dlg.querySelector('input[name=st][value=plan]')).checked = true;
   syncStatusFields();
   const del = $('#e-del'); del.hidden = !i; del.classList.remove('armed'); del.textContent = '삭제';
-  fillDatalists();
   closePop();
   dlg.showModal();
   if (i) $('#dlg-title').focus({preventScroll: true}); // 기존 항목은 키보드가 올라오지 않게
@@ -1268,8 +1293,8 @@ $('#item-form').addEventListener('submit', async e => {
   const prev = UI.editing ? S.items.find(x => x.id === UI.editing) : null;
   const status = dlg.querySelector('input[name=st]:checked')?.value || 'plan';
   const data = {
-    name, group: $('#e-group').value, section: $('#e-section').value.trim(),
-    amount: toNum($('#e-amount').value), when: $('#e-when').value.trim(), status,
+    name, group: $('#e-group').value, section: comboValue($('#e-section-sel'), $('#e-section')),
+    amount: toNum($('#e-amount').value), when: comboValue($('#e-when-sel'), $('#e-when')), status,
     source: await readSrcRows(), billMonth: status === 'card' ? ($('#e-bill').value || defaultBill()) : (prev?.billMonth || ''),
     gift: toNum($('#e-gift').value), note: $('#e-note').value.trim(),
     order: prev?.order ?? Date.now(),
