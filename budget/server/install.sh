@@ -6,7 +6,7 @@
 set -e
 DIR="$HOME/budget-server"
 BASE="${BUDGET_BASE:-https://pigjjun.github.io/budget/server}"
-PORT=8787
+PORT_FILE="$DIR/port"
 LABEL="io.github.pigjjun.budget"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 
@@ -35,8 +35,21 @@ if ! "$NODE" -e 'process.exit(JSON.parse(require("fs").readFileSync(process.argv
   echo "PIN 설정이 끝나지 않았어요. 다시 실행해 주세요:  bash $DIR/install.sh"; exit 1
 fi
 
+# 서버 번호(포트) 정하기: 예전에 정한 번호가 있으면 그대로, 없으면 18787부터 비어 있는 번호
+is_ours() { curl -fsS -m 2 "http://127.0.0.1:$1/api/ping" 2>/dev/null | grep -q '"name":"budget"'; }
+in_use() { lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1 || (exec 3<>/dev/tcp/127.0.0.1/"$1") 2>/dev/null; }
+PORT="$(cat "$PORT_FILE" 2>/dev/null || true)"
+case "$PORT" in ''|*[!0-9]*) PORT="";; esac
+if [ -z "$PORT" ]; then
+  for p in 18787 18788 18789 18790 18791 18792 18793 18794 18795 18796; do
+    if is_ours "$p" || ! in_use "$p"; then PORT="$p"; break; fi
+  done
+  [ -z "$PORT" ] && { echo "비어 있는 번호를 찾지 못했어요."; exit 1; }
+  echo "$PORT" > "$PORT_FILE"
+fi
+
 if [ "$(uname)" = "Darwin" ]; then
-  say "3/4  맥을 켜면 자동으로 실행되게 등록"
+  say "3/4  맥을 켜면 자동으로 실행되게 등록 (번호 $PORT)"
   mkdir -p "$HOME/Library/LaunchAgents"
   cat > "$PLIST" <<PL
 <?xml version="1.0" encoding="UTF-8"?>
@@ -45,6 +58,7 @@ if [ "$(uname)" = "Darwin" ]; then
   <key>Label</key><string>$LABEL</string>
   <key>ProgramArguments</key><array><string>$NODE</string><string>$DIR/server.js</string></array>
   <key>WorkingDirectory</key><string>$DIR</string>
+  <key>EnvironmentVariables</key><dict><key>PORT</key><string>$PORT</string></dict>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>StandardOutPath</key><string>$DIR/server.log</string>
@@ -53,6 +67,7 @@ if [ "$(uname)" = "Darwin" ]; then
 PL
   # 이미 등록돼 있으면 내렸다가 다시 올린다 (최신 macOS 방식, 안 되면 예전 방식)
   launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || launchctl unload "$PLIST" 2>/dev/null || true
+  for i in 1 2 3 4 5; do is_ours "$PORT" || break; sleep 1; done
   launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>/dev/null || launchctl load "$PLIST"
   sleep 2
 else
@@ -85,6 +100,7 @@ MSG
   exit 0
 fi
 cp "$0" "$DIR/install.sh" 2>/dev/null || true
+"$TS" funnel --https=443 off >/dev/null 2>&1 || true
 if "$TS" funnel --bg "$PORT"; then
   URL="$("$TS" status --json | "$NODE" -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log("https://"+JSON.parse(s).Self.DNSName.replace(/\.$/,""))}catch(e){}})')"
   say "끝났어요."

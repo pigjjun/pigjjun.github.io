@@ -9,7 +9,7 @@
  * 데이터: <이 파일 옆>/data/db.json  (매일 data/backups/ 에 하루 한 벌, 60일치)
  * 쓰는 법:
  *   node server.js setup      처음 한 번: PIN 정하기 + 구글 시트 데이터 가져오기
- *   node server.js            서버 실행 (127.0.0.1:8787)
+ *   node server.js            서버 실행 (127.0.0.1, install.sh가 고른 번호 · 기본 18787)
  *   node server.js pin        PIN 바꾸기 (등록된 기기는 모두 다시 PIN을 넣어야 함)
  *   node server.js import     구글 시트에서 다시 가져오기 (비어 있을 때만, --force 로 덮어쓰기)
  * 외부 패키지 없이 Node 18 이상이면 된다.
@@ -27,7 +27,7 @@ const DB_FILE = path.join(DATA, 'db.json');
 const CONF_FILE = path.join(DATA, 'config.json');
 const BACKUPS = path.join(DATA, 'backups');
 const APP_DIR = path.join(DIR, 'app');           // 있으면 앱 화면도 같이 내준다 (선택)
-const PORT = Number(process.env.PORT || 8787);
+const PORT = Number(process.env.PORT || readJson(path.join(DIR, 'port'), 0) || 18787); // install.sh가 고른 번호
 const HOST = process.env.HOST || '127.0.0.1';    // 밖에서는 Tailscale Funnel을 통해서만 들어온다
 const LEGACY_SHEET_API = process.env.BUDGET_SHEET_API || 'https://script.google.com/macros/s/AKfycbwc-r53xhdvGCqANA7Bfp2yG0pN4AIUBVWD6yrEUA5daLWmR3KyN8nwdDGVjhZY9niU/exec';
 const DEFAULT_ORIGINS = ['https://pigjjun.github.io'];
@@ -36,7 +36,7 @@ const MAX_FAILS = 10;                            // 한 시간에 PIN이 이만�
 const ID_RE = /^[A-Za-z0-9_.:@+-]{1,80}$/;
 
 /* ---------- 파일 ---------- */
-const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
+function readJson(f, d) { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } }
 function writeJson(f, v) {
   fs.mkdirSync(path.dirname(f), {recursive: true});
   const tmp = f + '.tmp';
@@ -194,6 +194,10 @@ function serve() {
   if (!conf.pin) { console.error('아직 PIN이 없어요. 먼저 실행하세요:  node server.js setup'); process.exit(1); }
   const srv = http.createServer((req, res) => {
     handle(req, res).catch(e => { try { send(res, 400, {error: 'BAD_REQUEST', message: String(e.message || e)}); } catch {} });
+  });
+  srv.on('error', e => {                         // 같은 번호를 이미 누가 쓰면 알아보기 쉽게 남기고 끝낸다
+    console.error(e.code === 'EADDRINUSE' ? `${PORT}번을 이미 다른 프로그램이 쓰고 있어요. install.sh 를 다시 실행하면 빈 번호를 골라요.` : String(e));
+    process.exit(1);
   });
   srv.listen(PORT, HOST, () => console.log(`가계부 서버가 켜졌어요: http://${HOST}:${PORT}  (데이터: ${DB_FILE})`));
   const stop = () => { try { if (saveTimer) saveDbNow(); } finally { process.exit(0); } };
