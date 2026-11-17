@@ -592,14 +592,31 @@ function krShort(n){
   if (man) p.push(man % 1000 === 0 ? man / 1000 + '천만' : man.toLocaleString('ko-KR') + '만');
   return p.join(' ') + '원';
 }
-// 카드 출금월 고르기: 이번 달 ~ 3달 뒤. 기본은 다음 달 (이번 달 카드값은 보통 다음 달에 빠짐)
-function billMonths(){
-  const m = new Date().getMonth();
-  return [0, 1, 2, 3].map(k => ((m + k) % 12 + 1) + '월');
+// 카드 출금월은 'YYYY-MM'으로 저장한다 (해가 바뀌어도 순서가 꼬이지 않게).
+// 예전에 저장된 '11월' 같은 값은 지금 기준 가장 가까운 해(-6~+5개월)로 읽는다.
+function billKey(v){
+  v = String(v || '').trim();
+  if (/^\d{4}-\d{2}$/.test(v)) return v;
+  const m = /^(\d{1,2})월$/.exec(v);
+  if (!m || +m[1] < 1 || +m[1] > 12) return '';
+  const now = new Date(), cur = now.getFullYear() * 12 + now.getMonth(), mo = +m[1] - 1;
+  const y = [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].find(yy => { const d = yy * 12 + mo - cur; return d >= -6 && d <= 5; });
+  return y + '-' + String(mo + 1).padStart(2, '0');
 }
-const defaultBill = () => billMonths()[1];
-// 출금월 순서: 이번 달 기준으로 가까운 달부터 (12월 다음 1월)
-const billRank = s => { const k = billMonths().indexOf(s); return k < 0 ? 99 : k; };
+// 올해면 '3월', 다른 해면 '27년 3월'
+function billLabel(k){
+  if (!/^\d{4}-\d{2}$/.test(k || '')) return '';
+  const [y, m] = k.split('-').map(Number);
+  return (y === new Date().getFullYear() ? '' : (y % 100) + '년 ') + m + '월';
+}
+// 고를 수 있는 출금월: 지난달 ~ 6달 뒤. 기본은 다음 달 (이번 달에 쓴 카드값은 보통 다음 달에 빠짐)
+function billMonths(){
+  const now = new Date();
+  return [-1, 0, 1, 2, 3, 4, 5, 6].map(k => { const d = new Date(now.getFullYear(), now.getMonth() + k, 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); });
+}
+const defaultBill = () => billMonths()[2];
+// 출금월 순서: 이른 달부터, 출금월 없는 것은 맨 뒤
+const billRank = k => k ? k : '9999';
 const sum = (arr, f = x => x.amount) => arr.reduce((a, x) => a + (Number(f(x)) || 0), 0);
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.name || a.text).localeCompare(String(b.name || b.text), 'ko');
 const fundName = id => S.funds.find(f => f.id === id)?.name;
@@ -817,9 +834,9 @@ function renderSummary(){
 
   // 카드 출금 대기 (월별)
   const card = items.filter(i => i.status === 'card').sort(byOrder);
-  const months = [...new Set(card.map(i => i.billMonth || '출금월 미정'))].sort((a, b) => billRank(a) - billRank(b));
+  const months = [...new Set(card.map(i => billKey(i.billMonth)))].sort((a, b) => billRank(a).localeCompare(billRank(b)));
   const billBlocks = months.map(m => {
-    const rows = card.filter(i => (i.billMonth || '출금월 미정') === m);
+    const rows = card.filter(i => billKey(i.billMonth) === m);
     // 카드(통장)별로: 그 통장에 넣어야 할 돈과, 그 돈을 어느 자금에서 가져올지
     const byCard = {};
     rows.forEach(i => {
@@ -839,7 +856,7 @@ function renderSummary(){
       </div>`;
     }).join('');
     return `<div class="panel" id="j-bill-${months.indexOf(m)}">
-      <h2>${esc(m)} 카드 출금 예정 <small>${rows.length}건</small></h2>
+      <h2>${esc(billLabel(m) || '출금월 미정')} 카드 출금 예정 <small>${rows.length}건</small></h2>
       <div class="bill-total num">${won(sum(rows))}</div>
       <div class="hint">카드로 이미 결제한 금액이에요. 통장마다 이만큼 넣어 두면 돼요.</div>
       <div class="deposits">${deposit}</div>
@@ -884,7 +901,7 @@ function renderSummary(){
   const todos = S.todos.filter(t => !t.done).sort(byOrder);
 
   const jumps = [['j-top', '요약'], ['j-funds', '자금 계획'], ['j-progress', '진행 상황'], ['j-todo', '할 일'],
-    ...months.map((m, k) => ['j-bill-' + k, m + ' 카드'])];
+    ...months.map((m, k) => ['j-bill-' + k, (billLabel(m) || '미정') + ' 카드'])];
   el.innerHTML = `
     <nav class="jumpbar" aria-label="현황 바로가기">${jumpChips(jumps)}</nav>
     <div id="j-top">
@@ -953,7 +970,7 @@ function renderSummary(){
     }
     b.disabled = true;
     const m = b.dataset.settle;
-    const rows = S.items.filter(i => i.status === 'card' && (i.billMonth || '출금월 미정') === m);
+    const rows = S.items.filter(i => i.status === 'card' && billKey(i.billMonth) === m);
     if (await writeMany('items', rows.map(i => ({id: i.id, data: {status: 'settled'}})))) toast(`${rows.length}건을 정산 완료로 바꿨어요`);
   }));
 }
@@ -1019,7 +1036,7 @@ function renderItems(){
 }
 function itemRow(i){
   const st = STATUS[i.status] || STATUS.plan;
-  const pill = i.status === 'card' ? `카드 · ${esc(i.billMonth || '출금월?')} 출금` : st.label;
+  const pill = i.status === 'card' ? `카드 · ${esc(billLabel(billKey(i.billMonth)) || '출금월?')} 출금` : st.label;
   const meta = [];
   if (i.when) meta.push(esc(i.when));
   if (i.status === 'gift' && i.gift) meta.push('가액 ' + won(i.gift));
@@ -1107,12 +1124,13 @@ function statusMenu(anchor){
   const i = S.items.find(x => x.id === anchor.dataset.qs);
   if (!i) return;
   const cur = i.status in STATUS ? i.status : 'plan';
-  const curKey = cur === 'card' ? 'card:' + (i.billMonth || '') : cur;
-  // 카드결제는 출금월별로 따로 고를 수 있게 (이번 달·다음 달·다다음 달 + 지금 값)
-  const months = billMonths().slice(0, 3);
-  if (cur === 'card' && i.billMonth && !months.includes(i.billMonth)) months.unshift(i.billMonth);
+  const curBill = billKey(i.billMonth);
+  const curKey = cur === 'card' ? 'card:' + curBill : cur;
+  // 카드결제는 출금월별로 따로 고를 수 있게 (이번 달·다음 달·다다음 달 + 지금 값). 더 먼 달은 편집 창에서
+  const months = billMonths().slice(1, 4);
+  if (cur === 'card' && curBill && !months.includes(curBill)) months.unshift(curBill);
   const opts = [['plan', STATUS.plan.label, 'plan'],
-    ...months.map(m => ['card:' + m, `카드결제 · ${m} 출금`, 'card']),
+    ...months.map(m => ['card:' + m, `카드결제 · ${billLabel(m)} 출금`, 'card']),
     ['settled', STATUS.settled.label, 'settled'], ['gift', STATUS.gift.label, 'gift']];
   openPop(anchor, `<div class="pop-h">${esc(i.name)}</div>` + opts.map(([k, label, dot]) =>
     `<button type="button" role="menuitemradio" aria-checked="${k === curKey}" data-v="${esc(k)}"><span class="dot s-${dot}"></span>${esc(label)}${k === curKey ? '<b>✓</b>' : ''}</button>`).join(''),
@@ -1122,7 +1140,7 @@ function statusMenu(anchor){
       const [st, month] = v.split(':');
       const data = {status: st};
       if (st === 'card'){ data.billMonth = month; if (!CARDS[i.cardBy] && lastCard() && cardSupported()) data.cardBy = lastCard(); }
-      if (await write('items', i.id, data, 'update')) toast(st === 'card' ? `카드결제 · ${month} 출금으로 바꿨어요` : `${STATUS[st].label}(으)로 바꿨어요`);
+      if (await write('items', i.id, data, 'update')) toast(st === 'card' ? `카드결제 · ${billLabel(month)} 출금으로 바꿨어요` : `${STATUS[st].label}(으)로 바꿨어요`);
     });
 }
 async function setCard(id, k){
@@ -1221,9 +1239,9 @@ function openEditor(id){
   fillSectionCombo(i?.section || '');
   $('#e-amount').value = i?.amount || '';
   setCombo($('#e-when-sel'), $('#e-when'), [...S.items].sort(byOrder).map(x => x.when), i?.when || '', '정하지 않음');
-  const bm = billMonths(), curBill = i?.billMonth || '';
-  $('#e-bill').innerHTML = (curBill && !bm.includes(curBill) ? [curBill, ...bm] : bm)
-    .map(m => `<option value="${esc(m)}">${esc(m)} 출금</option>`).join('');
+  const bm = billMonths(), curBill = billKey(i?.billMonth);
+  $('#e-bill').innerHTML = (curBill && !bm.includes(curBill) ? [curBill, ...bm].sort() : bm)
+    .map(m => `<option value="${esc(m)}">${esc(billLabel(m))} 출금</option>`).join('');
   $('#e-bill').value = curBill || defaultBill();
   $('#e-gift').value = i?.gift || '';
   formatMoney($('#e-amount')); formatMoney($('#e-gift'));
