@@ -1,7 +1,7 @@
 {
  "id": "./",
- "name": "이사·출산 예산장",
- "short_name": "예산장",
+ "name": "우리집 가계부",
+ "short_name": "가계부",
  "lang": "ko",
  "start_url": "./",
  "scope": "./",
