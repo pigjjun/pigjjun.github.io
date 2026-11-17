@@ -29,7 +29,7 @@ const BACKUPS = path.join(DATA, 'backups');
 const APP_DIR = path.join(DIR, 'app');           // 있으면 앱 화면도 같이 내준다 (선택)
 const PORT = Number(process.env.PORT || 8787);
 const HOST = process.env.HOST || '127.0.0.1';    // 밖에서는 Tailscale Funnel을 통해서만 들어온다
-const LEGACY_SHEET_API = 'https://script.google.com/macros/s/AKfycbwc-r53xhdvGCqANA7Bfp2yG0pN4AIUBVWD6yrEUA5daLWmR3KyN8nwdDGVjhZY9niU/exec';
+const LEGACY_SHEET_API = process.env.BUDGET_SHEET_API || 'https://script.google.com/macros/s/AKfycbwc-r53xhdvGCqANA7Bfp2yG0pN4AIUBVWD6yrEUA5daLWmR3KyN8nwdDGVjhZY9niU/exec';
 const DEFAULT_ORIGINS = ['https://pigjjun.github.io'];
 const MAX_BODY = 4 * 1024 * 1024;
 const MAX_FAILS = 10;                            // 한 시간에 PIN이 이만큼 틀리면 한 시간 잠금
@@ -202,10 +202,22 @@ function serve() {
 }
 
 /* ---------- 처음 설정 · 가져오기 ---------- */
+// 질문마다 새로 읽기를 열면 빨리 친(붙여넣은) 다음 답이 사라질 수 있어서, 읽기는 한 번만 열고 줄을 차례로 나눠 준다
+let rl = null; const lines = [], waiters = [];
 function ask(q) {
-  const input = process.stdin.isTTY ? process.stdin : fs.createReadStream('/dev/tty');
-  const rl = readline.createInterface({input, output: process.stdout});
-  return new Promise(r => rl.question(q, a => { rl.close(); if (input !== process.stdin) input.destroy(); r(a.trim()); }));
+  if (!rl) {
+    const input = process.stdin.isTTY ? process.stdin : fs.createReadStream('/dev/tty');
+    input.on('error', () => rl && rl.close());     // 터미널이 없을 때(자동 실행 등)는 조용히 멈춘다
+    rl = readline.createInterface({input, terminal: false});
+    rl.on('line', l => { const w = waiters.shift(); w ? w(l.trim()) : lines.push(l.trim()); });
+    rl.on('close', () => { while (waiters.length) waiters.shift()(null); });
+    rl.on('error', () => rl.close());
+  }
+  process.stdout.write(q);
+  return new Promise(r => lines.length ? r(lines.shift()) : waiters.push(r)).then(a => {
+    if (a === null) throw new Error('\n입력이 끝나서 멈췄어요. 터미널에서 다시 실행해 주세요.');
+    return a;
+  });
 }
 const docCount = () => Object.values(db.docs).reduce((a, c) => a + Object.values(c).filter(e => !e.x).length, 0);
 
@@ -267,6 +279,7 @@ if (require.main === module) {
       if (docCount() && process.argv[3] !== '--force') { console.log(`이미 데이터가 있어요 (${docCount()}개). 구글 시트 내용으로 다시 덮어쓰려면: node server.js import --force`); return; }
       console.log(`가져왔어요: ${await importSheet(await ask('구글 시트 앱의 PIN: '))}개`);
     } else serve();
+    if (rl) rl.close();
   })().catch(e => { console.error(e.message || e); process.exit(1); });
 }
 module.exports = {serve, applyOp, changesSince, hashPin, importSheet, _state: () => ({db, conf})};

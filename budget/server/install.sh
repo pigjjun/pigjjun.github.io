@@ -24,12 +24,16 @@ fi
 
 say "1/4  서버 파일 받기 → $DIR"
 mkdir -p "$DIR"
-curl -fsSL "$BASE/server.js" -o "$DIR/server.js.new"
-"$NODE" --check "$DIR/server.js.new"
-mv "$DIR/server.js.new" "$DIR/server.js"
+# 받은 파일을 먼저 검사한 뒤 바꾼다 (Node 24는 .js로 끝나지 않는 파일을 검사하지 못해서 이름을 .new.js로)
+curl -fsSL "$BASE/server.js" -o "$DIR/server.new.js"
+"$NODE" --check "$DIR/server.new.js"
+mv "$DIR/server.new.js" "$DIR/server.js"
 
 say "2/4  PIN 과 데이터"
 "$NODE" "$DIR/server.js" setup
+if ! "$NODE" -e 'process.exit(JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).pin ? 0 : 1)' "$DIR/data/config.json" 2>/dev/null; then
+  echo "PIN 설정이 끝나지 않았어요. 다시 실행해 주세요:  bash $DIR/install.sh"; exit 1
+fi
 
 if [ "$(uname)" = "Darwin" ]; then
   say "3/4  맥을 켜면 자동으로 실행되게 등록"
@@ -47,8 +51,9 @@ if [ "$(uname)" = "Darwin" ]; then
   <key>StandardErrorPath</key><string>$DIR/server.log</string>
 </dict></plist>
 PL
-  launchctl unload "$PLIST" 2>/dev/null || true
-  launchctl load "$PLIST"
+  # 이미 등록돼 있으면 내렸다가 다시 올린다 (최신 macOS 방식, 안 되면 예전 방식)
+  launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || launchctl unload "$PLIST" 2>/dev/null || true
+  launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>/dev/null || launchctl load "$PLIST"
   sleep 2
 else
   say "3/4  (맥이 아니라서 자동 실행 등록은 건너뜀)  직접 실행: node $DIR/server.js"
