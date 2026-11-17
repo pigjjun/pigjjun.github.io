@@ -58,8 +58,19 @@ PL
 else
   say "3/4  (맥이 아니라서 자동 실행 등록은 건너뜀)  직접 실행: node $DIR/server.js"
 fi
-if curl -fsS "http://127.0.0.1:$PORT/api/ping" >/dev/null 2>&1; then echo "서버가 켜졌어요 (127.0.0.1:$PORT)"
-else echo "서버가 아직 응답하지 않아요. 로그를 확인해 주세요: $DIR/server.log"; fi
+# 켜지는 데 몇 초 걸릴 수 있어서 최대 15초 기다린다
+UP=""
+for i in $(seq 1 15); do
+  if curl -fsS "http://127.0.0.1:$PORT/api/ping" >/dev/null 2>&1; then UP=1; break; fi
+  sleep 1
+done
+if [ -n "$UP" ]; then echo "서버가 켜졌어요 (127.0.0.1:$PORT)"
+else
+  echo "서버가 응답하지 않아요. 아래 내용을 Claude 에게 보내 주세요:"
+  echo "----- server.log (마지막 20줄)"; tail -n 20 "$DIR/server.log" 2>/dev/null || echo "(로그 없음)"
+  if [ "$(uname)" = "Darwin" ]; then echo "----- launchd"; launchctl print "gui/$(id -u)/$LABEL" 2>&1 | grep -E "state|last exit|program|path" | head -8; fi
+  echo "-----"
+fi
 
 say "4/4  폰에서 닿는 주소 만들기 (Tailscale Funnel)"
 TS="$(command -v tailscale || true)"
